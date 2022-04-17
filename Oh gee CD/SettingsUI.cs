@@ -1,6 +1,8 @@
-﻿using Dalamud.Interface.Windowing;
+﻿using Dalamud.Data;
+using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using ImGuiNET;
+using ImGuiScene;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,8 +16,10 @@ namespace Oh_gee_CD
     {
         private readonly PlayerManager manager;
         private readonly WindowSystem system;
+        private readonly DataManager dataManager;
+        private readonly Dictionary<uint, TextureWrap> textures = new();
 
-        public SettingsUI(PlayerManager manager, WindowSystem system) : base("Oh gee, CD Settings")
+        public SettingsUI(PlayerManager manager, WindowSystem system, DataManager dataManager) : base("Oh gee, CD Settings")
         {
             SizeConstraints = new WindowSizeConstraints()
             {
@@ -26,6 +30,7 @@ namespace Oh_gee_CD
             system.AddWindow(this);
             this.manager = manager;
             this.system = system;
+            this.dataManager = dataManager;
         }
 
         public int selectedJobIndex = 0;
@@ -69,6 +74,7 @@ namespace Oh_gee_CD
 
         public void DrawOGCDAction(Job job, OGCDAction action)
         {
+            DrawIcon(action.Icon);
             if (action.IsAvailable)
             {
                 ImGui.Text(action.Name);
@@ -189,6 +195,24 @@ namespace Oh_gee_CD
             ImGui.Unindent();
 
             ImGui.Separator();
+        }
+
+        private void DrawIcon(uint icon)
+        {
+            TextureWrap? hqicon;
+            if (textures.ContainsKey(icon))
+            {
+                hqicon = textures[icon];
+            }
+            else
+            {
+                hqicon = dataManager.GetImGuiTextureHqIcon(icon);
+                if (hqicon == null) return;
+                textures.Add(icon, hqicon);
+            }
+
+            ImGui.Image(hqicon.ImGuiHandle, new Vector2(24, 24));
+            ImGui.SameLine();
         }
 
         private void DrawHelper(string helpText)

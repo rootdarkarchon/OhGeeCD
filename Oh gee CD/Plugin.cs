@@ -48,7 +48,7 @@ namespace Oh_gee_CD
             Configuration = PluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager);
             Configuration.Initialize(PluginInterface);
             system = new WindowSystem("OhGeeCD");
-            ui = new SettingsUI(playerManager, system);
+            ui = new SettingsUI(playerManager, system, dataManager);
             soundManager.RegisterSoundSource(ui);
 
             commandManager.AddHandler(commandName, new CommandInfo(OnCommand));

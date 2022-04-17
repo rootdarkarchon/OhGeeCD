@@ -136,7 +136,7 @@ namespace Oh_gee_CD
                             || (action.ClassJobCategory.Value.Name.RawString.Contains(job.Abbreviation) && action.IsRoleAction))
                             && action.ActionCategory.Value.Name == "Ability" && action.ClassJobLevel > 0)
                         {
-                            OGCDAction ogcdaction = new OGCDAction(i, action.Name.RawString, TimeSpan.FromSeconds(action.Recast100ms / 10), action.CooldownGroup, action.ClassJobLevel, job.Level);
+                            OGCDAction ogcdaction = new OGCDAction(i, action.Icon, action.Name.RawString, TimeSpan.FromSeconds(action.Recast100ms / 10), action.CooldownGroup, action.ClassJobLevel, job.Level);
                             SoundManager.RegisterSoundSource(ogcdaction);
                             job.Actions.Add(ogcdaction);
                         }

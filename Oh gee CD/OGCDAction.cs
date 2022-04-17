@@ -27,6 +27,8 @@ namespace Oh_gee_CD
         public double EarlyCallout { get; set; } = 0;
 
         [JsonIgnore]
+        public uint Icon { get; set; }
+        [JsonIgnore]
         public string Name { get; set; }
         [JsonIgnore]
         public TimeSpan Recast { get; set; }
@@ -46,9 +48,10 @@ namespace Oh_gee_CD
 
         public event EventHandler<SoundEventArgs>? SoundEvent;
 
-        public OGCDAction(uint id, string name, TimeSpan recast, byte cooldownGroup, byte requiredLevel, uint currentJobLevel)
+        public OGCDAction(uint id, uint icon, string name, TimeSpan recast, byte cooldownGroup, byte requiredLevel, uint currentJobLevel)
         {
             Id = id;
+            Icon = icon;
             Name = name;
             Recast = recast;
             TextToSpeechName = name;
