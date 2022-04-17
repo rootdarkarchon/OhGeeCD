@@ -84,7 +84,7 @@ namespace Oh_gee_CD
 
             if (ret == 0) return ret;
 
-            var action = Jobs.FirstOrDefault(j => j.IsActive)?.Actions.First(a => a.Id == adjustedActionId);
+            var action = Jobs.FirstOrDefault(j => j.IsActive)?.Actions.FirstOrDefault(a => a.Id == adjustedActionId);
             if (action != null)
             {
                 action.StartCountdown();
