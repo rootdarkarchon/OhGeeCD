@@ -36,7 +36,8 @@ namespace SamplePlugin
         private PluginUI PluginUi { get; init; }
 
         private ActionManager* actionManager;
-        private string[] supportedClasses = { };
+        private string[] supportedClasses = { "PLD", "WAR", "DRK", "GNB", "WHM", "SCH", "AST", "SGE", "MNK", "DRG", "NIN", "SAM", "RPR", "BRD", "MCH", "DNC", "BLM", "SMN", "RDM" };
+        private List<Job> Jobs = new List<Job>();
         private List<OGCDAction> ogcdActions = new List<OGCDAction>();
         SpeechSynthesizer synthesizer = new SpeechSynthesizer();
 
@@ -44,7 +45,7 @@ namespace SamplePlugin
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
             [RequiredVersion("1.0")] CommandManager commandManager,
             ClientState state, ChatGui chatHandlers, DataManager dataManager,
-            GameNetwork network)
+            Framework framework)
         {
             PluginInterface = pluginInterface;
             CommandManager = commandManager;
@@ -61,26 +62,84 @@ namespace SamplePlugin
             UseActionHook = new Hook<UseActionDelegate>((IntPtr)ActionManager.fpUseAction, UseActionDetour);
             UseActionHook.Enable();
 
+            framework.Update += Framework_Update;
+
             PluginInterface.UiBuilder.Draw += DrawUI;
             PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
+            Jobs = new List<Job>()
+            {
+                new Job("PLD", "GLD"),
+                new Job("WAR", "MRD"),
+                new Job("DRK"),
+                new Job("GNB"),
+                new Job("WHM", "CNJ"),
+                new Job("SCH", "ACN"),
+                new Job("AST"),
+                new Job("SGE"),
+                new Job("MNK", "PGL"),
+                new Job("DRG", "LNC"),
+                new Job("NIN", "ROG"),
+                new Job("SAM"),
+                new Job("RPR"),
+                new Job("BRD", "ARC"),
+                new Job("MCH"),
+                new Job("DNC"),
+                new Job("BLM", "THM"),
+                new Job("SMN", "ACN"),
+                new Job("RDM")
+            };
+
             var actions = dataManager.Excel.GetSheet<Lumina.Excel.GeneratedSheets.Action>();
-            var classJob = State.LocalPlayer.ClassJob;
-            var classJobAbbr = classJob.GameData.Abbreviation.RawString;
-            var classJobParent = classJob.GameData.ClassJobParent.Value.Abbreviation.RawString;
 
             for (uint i = 0; i < actions.RowCount; i++)
             {
                 var action = actions.GetRow(i);
                 if (action == null || action.IsPvP) continue;
-                if (action.ClassJob.Value != null || action.ClassJobCategory.Value.Name.RawString.Contains(classJobAbbr))
+                foreach (var job in Jobs)
                 {
-                    var abbr = action.ClassJob?.Value?.Abbreviation;
-                    if ((abbr?.RawString == classJobAbbr || abbr?.RawString == classJobParent || (action.ClassJobCategory.Value.Name.RawString.Contains(classJobAbbr) && action.IsRoleAction))
-                        && action.ActionCategory.Value.Name == "Ability")
+                    if (action.ClassJob.Value != null || action.ClassJobCategory.Value.Name.RawString.Contains(job.Name))
                     {
-                        ogcdActions.Add(new OGCDAction(i, action.Name.RawString, (short)ActionManager.GetMaxCharges(i, State.LocalPlayer.Level), TimeSpan.FromSeconds(action.Recast100ms / 10), synthesizer));
+                        var abbr = action.ClassJob?.Value?.Abbreviation;
+                        if ((abbr?.RawString == job.Name || (abbr?.RawString == job.Parent && job.Parent != null) || (action.ClassJobCategory.Value.Name.RawString.Contains(job.Name) && action.IsRoleAction))
+                            && action.ActionCategory.Value.Name == "Ability" && action.ClassJobLevel > 0)
+                        {
+                            //PluginLog.Debug($"Job: {job.Name}, Parent: {job.Parent}");
+                            job.Actions.Add(new OGCDAction(i, action.Name.RawString, (short)ActionManager.GetMaxCharges(i, State.LocalPlayer.Level),
+                                TimeSpan.FromSeconds(action.Recast100ms / 10), action.CooldownGroup, action.ClassJobLevel, synthesizer, State));
+                        }
                     }
+                }
+            }
+
+            foreach (var job in Jobs)
+            {
+                job.Debug();
+            }
+        }
+
+        private string lastJob = string.Empty;
+
+        private void Framework_Update(Framework framework)
+        {
+            if (lastJob != State.LocalPlayer.ClassJob.GameData.Abbreviation)
+            {
+                lastJob = State.LocalPlayer.ClassJob.GameData.Abbreviation;
+                UpdateJobs();
+            }
+        }
+
+        private void UpdateJobs()
+        {
+            foreach (var job in Jobs)
+            {
+                if (job.Name == lastJob || job.Parent == lastJob)
+                {
+                    job.MakeActive();
+                }
+                else
+                {
+                    job.MakeInactive();
                 }
             }
         }
@@ -95,22 +154,26 @@ namespace SamplePlugin
         {
             var ret = UseActionHook.Original(actionManager, actionType, actionID, targetObjectID, param, useType, pvp, isGroundTarget);
             uint adjustedActionId = actionManager->GetAdjustedActionId(actionID);
-            if (ret != 0)
+
+            if (ret == 0) return ret;
+
+            var playerJob = State.LocalPlayer.ClassJob.GameData.Abbreviation.RawString;
+            var job = Jobs.First(j => j.Name == playerJob || j.Parent == playerJob);
+            var action = job.Actions.First(a => a.Id == adjustedActionId);
+            action.StartCountdown();
+            foreach (var act in Jobs.SelectMany(j => j.Actions.Where(a => a.CooldownGroup == action.CooldownGroup && a != action)))
             {
-                var action = ogcdActions.FirstOrDefault(a => a.Id == adjustedActionId);
-                if (action != null)
-                {
-                    action.StartCountdown();
-                }
+                act.TriggerAdditionally(action.Recast);
             }
+
             return ret;
         }
 
         public void Dispose()
         {
-            foreach (var ogcdAction in ogcdActions)
+            foreach (var job in Jobs)
             {
-                ogcdAction.Dispose();
+                job.Dispose();
             }
             UseActionHook?.Dispose();
             PluginUi.Dispose();
@@ -135,31 +198,110 @@ namespace SamplePlugin
         }
     }
 
+    public class Job : IDisposable
+    {
+        public string Name { get; }
+        public string? Parent { get; }
+
+        public Job(string name, string? parent = null)
+        {
+            Name = name;
+            Parent = parent;
+        }
+
+        public List<OGCDAction> Actions { get; set; } = new List<OGCDAction>();
+
+        public void MakeActive()
+        {
+            PluginLog.Debug($"Job now active: {Name}/{Parent}");
+            foreach (var action in Actions)
+            {
+                action.IsCurrentClassJob = true;
+            }
+        }
+
+        public void MakeInactive()
+        {
+            foreach (var action in Actions)
+            {
+                action.IsCurrentClassJob = false;
+            }
+        }
+
+        public void Debug()
+        {
+            PluginLog.Debug($"{Name} ({Parent})");
+            foreach (var action in Actions)
+            { action.Debug(); }
+        }
+
+        public void Dispose()
+        {
+            foreach (var action in Actions)
+            {
+                action.Dispose();
+            }
+        }
+    }
+
     public class OGCDAction : IDisposable
     {
         public string Name { get; set; }
         public uint Id { get; set; }
         public TimeSpan Recast { get; set; }
+        public byte CooldownGroup { get; }
         public short MaxStacks { get; set; }
-        private short stacks;
+        private short currentStacks;
         CancellationTokenSource cts = new CancellationTokenSource();
+        private byte requiredLevel;
         private readonly SpeechSynthesizer synthesizer;
+        private readonly ClientState clientState;
 
-        public OGCDAction(uint id, string name, short maxStacks, TimeSpan recast, SpeechSynthesizer synthesizer)
+        public bool IsCurrentClassJob { get; set; }
+        public bool IsAvailable => clientState.LocalPlayer.Level >= requiredLevel;
+
+        public OGCDAction(uint id, string name, short maxStacks, TimeSpan recast, byte cooldownGroup, byte requiredLevel, SpeechSynthesizer synthesizer, ClientState clientState)
         {
             Id = id;
             Name = name;
             MaxStacks = maxStacks;
-            stacks = maxStacks;
+            currentStacks = maxStacks;
             Recast = recast;
+            CooldownGroup = cooldownGroup;
+            this.requiredLevel = requiredLevel;
             this.synthesizer = synthesizer;
-            PluginLog.Debug($"{Id}:{Name}:{MaxStacks}:{Recast}");
+            this.clientState = clientState;
+        }
+
+        public void Debug()
+        {
+            PluginLog.Debug($"{Id}:{Name}:{MaxStacks}:{Recast}:{requiredLevel}:{IsAvailable}");
         }
 
         public void StartCountdown()
         {
-            PluginLog.Debug($"Casted {Name}");
-            if (MaxStacks > 1 && stacks != MaxStacks)
+            StartCountdown(TimeSpan.Zero);
+        }
+
+        public void TriggerAdditionally(TimeSpan timeSpan)
+        {
+            StartCountdown(timeSpan);
+        }
+
+        private void StartCountdown(TimeSpan timerOverride)
+        {
+            TimeSpan recastTimer = Recast;
+            if (timerOverride != TimeSpan.Zero)
+            {
+                recastTimer = timerOverride;
+                PluginLog.Debug($"Triggered in addition: {Name}");
+            }
+            else
+            {
+                PluginLog.Debug($"Casted {Name}");
+            }
+
+            if (MaxStacks > 1 && currentStacks != MaxStacks)
             {
                 ReduceStacks();
             }
@@ -172,13 +314,16 @@ namespace SamplePlugin
                         ReduceStacks();
                         do
                         {
-                            PluginLog.Debug($"Looping for {Name}: {stacks}/{MaxStacks}, from now: +{Recast.TotalSeconds}s");
-                            await Task.Delay((int)Recast.TotalMilliseconds, cts.Token);
-                            synthesizer.Speak(Name);
+                            PluginLog.Debug($"Looping for {Name}: {currentStacks}/{MaxStacks}, from now: +{recastTimer.TotalSeconds}s");
+                            await Task.Delay((int)recastTimer.TotalMilliseconds, cts.Token);
+                            if (IsCurrentClassJob)
+                            {
+                                synthesizer.Speak(Name);
+                            }
                             PluginLog.Debug($"{Name} available again!");
-                            stacks++;
+                            currentStacks++;
 
-                        } while (stacks != MaxStacks && !cts.IsCancellationRequested);
+                        } while (currentStacks != MaxStacks && !cts.IsCancellationRequested);
                     }
                     catch (TaskCanceledException)
                     {
@@ -192,12 +337,13 @@ namespace SamplePlugin
 
         private void ReduceStacks()
         {
-            stacks--;
-            PluginLog.Debug($"Reducing stacks for {Name} to {stacks}");
+            currentStacks--;
+            PluginLog.Debug($"Reducing stacks for {Name} to {currentStacks}");
         }
 
         public void Dispose()
         {
+            IsCurrentClassJob = false;
             cts.Cancel();
         }
     }
