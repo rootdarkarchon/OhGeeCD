@@ -84,9 +84,6 @@ namespace OhGeeCD
 
         public void Initialize()
         {
-            framework.Update += Framework_Update;
-            UseActionHook.Enable();
-
             Resolver.Initialize();
             var levels = UIState.Instance()->PlayerState.ClassJobLevelArray;
 
@@ -130,6 +127,9 @@ namespace OhGeeCD
                     }
                 }
             }
+
+            framework.Update += Framework_Update;
+            UseActionHook.Enable();
 
             foreach (var job in Jobs)
             {
