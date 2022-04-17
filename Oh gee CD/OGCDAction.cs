@@ -13,7 +13,7 @@ namespace Oh_gee_CD
         [JsonProperty]
         public uint Id { get; set; }
         [JsonProperty]
-        public int OGCDBarId { get; set; }
+        public int OGCDBarId { get; set; } = 0;
         [JsonProperty]
         public string TextToSpeechName { get; set; }
         [JsonProperty]
@@ -22,6 +22,7 @@ namespace Oh_gee_CD
         public bool SoundEffectEnabled { get; set; } = false;
         [JsonProperty]
         public bool TextToSpeechEnabled { get; set; } = false;
+        public bool DrawOnOGCDBar { get; set; } = false;
         [JsonProperty]
         public double EarlyCallout { get; set; } = 0;
 

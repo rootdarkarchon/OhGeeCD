@@ -17,14 +17,20 @@ namespace Oh_gee_CD
 
         public SettingsUI(PlayerManager manager, WindowSystem system) : base("Oh gee, CD Settings")
         {
+            SizeConstraints = new WindowSizeConstraints()
+            {
+                MinimumSize = new(600, 300),
+                MaximumSize = new(9999, 9999)
+            };
+
             system.AddWindow(this);
             this.manager = manager;
             this.system = system;
         }
 
-        public int selectedIndex = 0;
+        public int selectedJobIndex = 0;
 
-        public event EventHandler<SoundEventArgs> SoundEvent;
+        public event EventHandler<SoundEventArgs>? SoundEvent;
 
         public override void Draw()
         {
@@ -35,10 +41,10 @@ namespace Oh_gee_CD
 
             foreach (var job in manager.Jobs)
             {
-                bool isSelected = (index == selectedIndex);
+                bool isSelected = (index == selectedJobIndex);
                 if (ImGui.Selectable(job.Abbreviation, isSelected))
                 {
-                    selectedIndex = index;
+                    selectedJobIndex = index;
                 }
 
                 if (isSelected)
@@ -53,17 +59,25 @@ namespace Oh_gee_CD
             ImGui.SameLine();
 
             ImGui.BeginChild("content", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y));
-            foreach (var action in manager.Jobs[selectedIndex].Actions)
+            foreach (var action in manager.Jobs[selectedJobIndex].Actions)
             {
-                DrawOGCDAction(action);
+                DrawOGCDAction(manager.Jobs[selectedJobIndex], action);
             }
             ImGui.EndChild();
 
         }
 
-        public void DrawOGCDAction(OGCDAction action)
+        public void DrawOGCDAction(Job job, OGCDAction action)
         {
-            ImGui.Text(action.Name);
+            if (action.IsAvailable)
+            {
+                ImGui.Text(action.Name);
+            }
+            else
+            {
+                ImGui.TextDisabled(action.Name);
+                DrawHelper($"You currently cannot execute this ability, your {job.Abbreviation} is level {job.Level}, ability is level {action.RequiredJobLevel}.");
+            }
             ImGui.SameLine(200);
 
             bool ttsEnabled = action.TextToSpeechEnabled;
@@ -80,10 +94,20 @@ namespace Oh_gee_CD
                 action.SoundEffectEnabled = soundEnabled;
             }
 
+            ImGui.SameLine(410);
+
+            bool onGCDBar = action.DrawOnOGCDBar;
+            if (ImGui.Checkbox("On OGCDBar##" + action.Name, ref onGCDBar))
+            {
+                action.DrawOnOGCDBar = onGCDBar;
+            }
+
+            ImGui.Indent();
+
+
             if (action.TextToSpeechEnabled)
             {
                 string ttsString = action.TextToSpeechName;
-                ImGui.Indent();
                 ImGui.SetNextItemWidth(150);
 
                 if (ImGui.InputText("Text to say##TextToString" + action.Name, ref ttsString, 50))
@@ -97,13 +121,11 @@ namespace Oh_gee_CD
                 {
                     SoundEvent?.Invoke(null, new SoundEventArgs(action.TextToSpeechName, 0));
                 }
-                ImGui.Unindent();
             }
 
             if (action.SoundEffectEnabled)
             {
                 int soundId = action.SoundEffect;
-                ImGui.Indent();
                 ImGui.SetNextItemWidth(150);
 
                 if (ImGui.InputInt("Sound Effect##TextToString" + action.Name, ref soundId, 1, 5))
@@ -119,10 +141,68 @@ namespace Oh_gee_CD
                 {
                     SoundEvent?.Invoke(null, new SoundEventArgs(string.Empty, soundId));
                 }
-                ImGui.Unindent();
             }
 
+            if (action.SoundEffectEnabled || action.TextToSpeechEnabled)
+            {
+                double earlyCallout = action.EarlyCallout;
+                ImGui.SetNextItemWidth(150);
+                if (ImGui.InputDouble("Early Callout##" + action.Name, ref earlyCallout, 0.1, 0.1, "%.1f s"))
+                {
+                    if (earlyCallout < 0) earlyCallout = 0;
+                    if (earlyCallout > action.Recast.TotalSeconds) earlyCallout = action.Recast.TotalSeconds;
+                    action.EarlyCallout = earlyCallout;
+                }
+                DrawHelper("This will give the callout earlier than the skill is available.");
+            }
+
+            if (action.DrawOnOGCDBar)
+            {
+                if (ImGui.BeginCombo("OGCD Bar##" + action.Name, action.OGCDBarId == 0 ? "None" : manager.OGCDBars.Single(a => a.Id == action.OGCDBarId).Name))
+                {
+                    if (ImGui.Selectable("None##" + action.Name, action.OGCDBarId == 0))
+                    {
+                        action.OGCDBarId = 0;
+                    }
+
+                    if (action.OGCDBarId == 0)
+                    {
+                        ImGui.SetItemDefaultFocus();
+                    }
+
+                    foreach (var item in manager.OGCDBars)
+                    {
+                        if (ImGui.Selectable(item.Name, action.OGCDBarId == item.Id))
+                        {
+                            action.OGCDBarId = item.Id;
+                        }
+
+                        if (item.Id == action.OGCDBarId)
+                        {
+                            ImGui.SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui.EndCombo();
+                }
+            }
+
+            ImGui.Unindent();
+
             ImGui.Separator();
+        }
+
+        private void DrawHelper(string helpText)
+        {
+            ImGui.SameLine();
+            ImGui.TextDisabled("(?)");
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.PushTextWrapPos(ImGui.GetFontSize() * 35.0f);
+                ImGui.TextUnformatted(helpText);
+                ImGui.PopTextWrapPos();
+                ImGui.EndTooltip();
+            }
         }
 
         void IDisposable.Dispose()

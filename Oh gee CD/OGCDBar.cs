@@ -10,6 +10,7 @@ namespace Oh_gee_CD
     public class OGCDBar
     {
         public int Id { get; set; }
+        public string Name { get; set; }
         public OGCDBarHorizontalLayout HorizontalLayout { get; set; }
         public OGCDBarVerticalLayout VerticalLayout { get; set; }
         public int HorizontalPadding { get; set; }
