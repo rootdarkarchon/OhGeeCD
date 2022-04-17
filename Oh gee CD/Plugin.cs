@@ -9,13 +9,16 @@ using Dalamud.Hooking;
 using Dalamud.IoC;
 using Dalamud.Logging;
 using Dalamud.Plugin;
+using FFXIVClientStructs;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Speech.Synthesis;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,6 +30,7 @@ namespace SamplePlugin
         public string Name => "Oh gee, CD";
 
         private const string commandName = "/pohgeecd";
+        private readonly Framework framework;
 
         private DalamudPluginInterface PluginInterface { get; init; }
         private CommandManager CommandManager { get; init; }
@@ -37,7 +41,6 @@ namespace SamplePlugin
 
         private ActionManager* actionManager;
         private List<Job> Jobs = new List<Job>();
-        private List<OGCDAction> ogcdActions = new List<OGCDAction>();
         SpeechSynthesizer synthesizer = new SpeechSynthesizer();
 
         public Plugin(
@@ -50,6 +53,7 @@ namespace SamplePlugin
             CommandManager = commandManager;
             State = state;
             ChatHandlers = chatHandlers;
+            this.framework = framework;
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             Configuration.Initialize(PluginInterface);
             synthesizer.SetOutputToDefaultAudioDevice();
@@ -66,28 +70,28 @@ namespace SamplePlugin
             PluginInterface.UiBuilder.Draw += DrawUI;
             PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
-            Jobs = new List<Job>()
+            Resolver.Initialize();
+            var levels = UIState.Instance()->PlayerState.ClassJobLevelArray;
+
+            Jobs = new List<Job>();
+
+            var classJobs = dataManager.Excel.GetSheet<ClassJob>();
+            for (uint i = 0; i < classJobs.RowCount; i++)
             {
-                new Job("PLD", "GLD"),
-                new Job("WAR", "MRD"),
-                new Job("DRK"),
-                new Job("GNB"),
-                new Job("WHM", "CNJ"),
-                new Job("SCH", "ACN"),
-                new Job("AST"),
-                new Job("SGE"),
-                new Job("MNK", "PGL"),
-                new Job("DRG", "LNC"),
-                new Job("NIN", "ROG"),
-                new Job("SAM"),
-                new Job("RPR"),
-                new Job("BRD", "ARC"),
-                new Job("MCH"),
-                new Job("DNC"),
-                new Job("BLM", "THM"),
-                new Job("SMN", "ACN"),
-                new Job("RDM")
-            };
+                var job = classJobs.GetRow(i);
+                if (job.IsLimitedJob || job.DohDolJobIndex >= 0 || job.ExpArrayIndex <= 0) continue;
+                var jobinList = Jobs.FirstOrDefault(j => j.Abbreviation == job.ClassJobParent?.Value?.Abbreviation.RawString);
+                if (jobinList == null)
+                {
+                    var newJob = new Job(job.Abbreviation.RawString, job.ClassJobParent?.Value?.Abbreviation.RawString);
+                    newJob.SetLevel(levels[job.ExpArrayIndex]);
+                    Jobs.Add(newJob);
+                }
+                else
+                {
+                    jobinList.SetAbbreviation(job.Abbreviation.RawString);
+                }
+            }
 
             var actions = dataManager.Excel.GetSheet<Lumina.Excel.GeneratedSheets.Action>();
 
@@ -97,15 +101,14 @@ namespace SamplePlugin
                 if (action == null || action.IsPvP) continue;
                 foreach (var job in Jobs)
                 {
-                    if (action.ClassJob.Value != null || action.ClassJobCategory.Value.Name.RawString.Contains(job.Name))
+                    if (action.ClassJob.Value != null || action.ClassJobCategory.Value.Name.RawString.Contains(job.Abbreviation))
                     {
                         var abbr = action.ClassJob?.Value?.Abbreviation;
-                        if ((abbr?.RawString == job.Name || (abbr?.RawString == job.Parent && job.Parent != null) || (action.ClassJobCategory.Value.Name.RawString.Contains(job.Name) && action.IsRoleAction))
+                        if ((abbr?.RawString == job.Abbreviation || (abbr?.RawString == job.ParentAbbreviation && job.ParentAbbreviation != null)
+                            || (action.ClassJobCategory.Value.Name.RawString.Contains(job.Abbreviation) && action.IsRoleAction))
                             && action.ActionCategory.Value.Name == "Ability" && action.ClassJobLevel > 0)
                         {
-                            //PluginLog.Debug($"Job: {job.Name}, Parent: {job.Parent}");
-                            job.Actions.Add(new OGCDAction(i, action.Name.RawString, (short)ActionManager.GetMaxCharges(i, State.LocalPlayer.Level),
-                                TimeSpan.FromSeconds(action.Recast100ms / 10), action.CooldownGroup, action.ClassJobLevel, synthesizer, State));
+                            job.Actions.Add(new OGCDAction(i, action.Name.RawString, TimeSpan.FromSeconds(action.Recast100ms / 10), action.CooldownGroup, action.ClassJobLevel, synthesizer, State));
                         }
                     }
                 }
@@ -132,7 +135,7 @@ namespace SamplePlugin
         {
             foreach (var job in Jobs)
             {
-                if (job.Name == lastJob || job.Parent == lastJob)
+                if (job.Abbreviation == lastJob || job.ParentAbbreviation == lastJob)
                 {
                     job.MakeActive();
                 }
@@ -161,7 +164,7 @@ namespace SamplePlugin
             action.StartCountdown();
             foreach (var act in Jobs.SelectMany(j => j.Actions.Where(a => a.CooldownGroup == action.CooldownGroup && a != action)))
             {
-                act.TriggerAdditionally(action.Recast);
+                act.TriggerAdditionalCountdown(action.Recast);
             }
 
             return ret;
@@ -176,6 +179,7 @@ namespace SamplePlugin
             UseActionHook?.Dispose();
             PluginUi.Dispose();
             CommandManager.RemoveHandler(commandName);
+            framework.Update -= Framework_Update;
         }
 
         private void OnCommand(string command, string args)
@@ -198,26 +202,38 @@ namespace SamplePlugin
 
     public class Job : IDisposable
     {
-        public string Name { get; }
-        public string? Parent { get; }
+        public string Abbreviation { get; private set; }
+        public string? ParentAbbreviation { get; private set; }
 
         public bool IsActive { get; private set; }
 
+        public short Level { get; private set; }
+
+        public void SetLevel(short level)
+        {
+            Level = level;
+        }
+
+        public void SetAbbreviation(string abbreviation)
+        {
+            Abbreviation = abbreviation;
+        }
+
         public Job(string name, string? parent = null)
         {
-            Name = name;
-            Parent = parent;
+            Abbreviation = name;
+            ParentAbbreviation = parent;
         }
 
         public List<OGCDAction> Actions { get; set; } = new List<OGCDAction>();
 
         public void MakeActive()
         {
-            PluginLog.Debug($"Job now active: {Name}/{Parent}");
+            PluginLog.Debug($"Job now active: {Abbreviation}/{ParentAbbreviation}");
             IsActive = true;
             foreach (var action in Actions)
             {
-                action.IsCurrentClassJob = true;
+                action.MakeActive();
             }
         }
 
@@ -226,13 +242,13 @@ namespace SamplePlugin
             IsActive = false;
             foreach (var action in Actions)
             {
-                action.IsCurrentClassJob = false;
+                action.MakeInactive();
             }
         }
 
         public void Debug()
         {
-            PluginLog.Debug($"{Name} ({Parent})");
+            PluginLog.Debug($"{Abbreviation} ({ParentAbbreviation})");
             foreach (var action in Actions)
             { action.Debug(); }
         }
@@ -252,22 +268,28 @@ namespace SamplePlugin
         public uint Id { get; set; }
         public TimeSpan Recast { get; set; }
         public byte CooldownGroup { get; }
-        public short MaxStacks { get; set; }
+        public short MaxStacks { get; private set; }
         private short currentStacks;
         CancellationTokenSource cts = new CancellationTokenSource();
         private byte requiredLevel;
         private readonly SpeechSynthesizer synthesizer;
         private readonly ClientState clientState;
 
-        public bool IsCurrentClassJob { get; set; }
-        public bool IsAvailable => clientState.LocalPlayer.Level >= requiredLevel;
+        public bool IsCurrentClassJob { get; private set; }
+        public bool IsAvailable { get; private set; }
 
-        public OGCDAction(uint id, string name, short maxStacks, TimeSpan recast, byte cooldownGroup, byte requiredLevel, SpeechSynthesizer synthesizer, ClientState clientState)
+        public void MakeActive()
+        {
+            IsCurrentClassJob = true;
+            MaxStacks = (short)ActionManager.GetMaxCharges(Id, clientState.LocalPlayer.Level);
+            IsAvailable = clientState.LocalPlayer.Level >= requiredLevel;
+            currentStacks = MaxStacks;
+        }
+
+        public OGCDAction(uint id, string name, TimeSpan recast, byte cooldownGroup, byte requiredLevel, SpeechSynthesizer synthesizer, ClientState clientState)
         {
             Id = id;
             Name = name;
-            MaxStacks = maxStacks;
-            currentStacks = maxStacks;
             Recast = recast;
             CooldownGroup = cooldownGroup;
             this.requiredLevel = requiredLevel;
@@ -285,7 +307,7 @@ namespace SamplePlugin
             StartCountdown(TimeSpan.Zero);
         }
 
-        public void TriggerAdditionally(TimeSpan timeSpan)
+        public void TriggerAdditionalCountdown(TimeSpan timeSpan)
         {
             StartCountdown(timeSpan);
         }
@@ -347,6 +369,11 @@ namespace SamplePlugin
         {
             IsCurrentClassJob = false;
             cts.Cancel();
+        }
+
+        internal void MakeInactive()
+        {
+            IsCurrentClassJob = false;
         }
     }
 }
