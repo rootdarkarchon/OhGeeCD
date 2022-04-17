@@ -36,7 +36,6 @@ namespace SamplePlugin
         private PluginUI PluginUi { get; init; }
 
         private ActionManager* actionManager;
-        private string[] supportedClasses = { "PLD", "WAR", "DRK", "GNB", "WHM", "SCH", "AST", "SGE", "MNK", "DRG", "NIN", "SAM", "RPR", "BRD", "MCH", "DNC", "BLM", "SMN", "RDM" };
         private List<Job> Jobs = new List<Job>();
         private List<OGCDAction> ogcdActions = new List<OGCDAction>();
         SpeechSynthesizer synthesizer = new SpeechSynthesizer();
@@ -157,8 +156,7 @@ namespace SamplePlugin
 
             if (ret == 0) return ret;
 
-            var playerJob = State.LocalPlayer.ClassJob.GameData.Abbreviation.RawString;
-            var job = Jobs.First(j => j.Name == playerJob || j.Parent == playerJob);
+            var job = Jobs.First(j => j.IsActive);
             var action = job.Actions.First(a => a.Id == adjustedActionId);
             action.StartCountdown();
             foreach (var act in Jobs.SelectMany(j => j.Actions.Where(a => a.CooldownGroup == action.CooldownGroup && a != action)))
@@ -203,6 +201,8 @@ namespace SamplePlugin
         public string Name { get; }
         public string? Parent { get; }
 
+        public bool IsActive { get; private set; }
+
         public Job(string name, string? parent = null)
         {
             Name = name;
@@ -214,6 +214,7 @@ namespace SamplePlugin
         public void MakeActive()
         {
             PluginLog.Debug($"Job now active: {Name}/{Parent}");
+            IsActive = true;
             foreach (var action in Actions)
             {
                 action.IsCurrentClassJob = true;
@@ -222,6 +223,7 @@ namespace SamplePlugin
 
         public void MakeInactive()
         {
+            IsActive = false;
             foreach (var action in Actions)
             {
                 action.IsCurrentClassJob = false;
