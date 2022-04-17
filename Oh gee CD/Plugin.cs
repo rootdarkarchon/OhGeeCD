@@ -26,6 +26,7 @@ namespace OhGeeCD
         private PluginUI PluginUi { get; init; }
 
         private PlayerManager playerManager;
+        private SoundManager soundManager;
 
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
@@ -39,7 +40,8 @@ namespace OhGeeCD
             ChatHandlers = chatHandlers;
             DataManager = dataManager;
             Framework = framework;
-            playerManager = new PlayerManager(framework, dataManager, clientState);
+            soundManager = new SoundManager();
+            playerManager = new PlayerManager(framework, dataManager, clientState, soundManager);
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             Configuration.Initialize(PluginInterface);
 

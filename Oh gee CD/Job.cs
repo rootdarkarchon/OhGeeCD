@@ -1,6 +1,7 @@
 ﻿using Dalamud.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace OhGeeCD
 {
@@ -54,8 +55,10 @@ namespace OhGeeCD
         public void Debug()
         {
             PluginLog.Debug($"{Abbreviation} ({ParentAbbreviation}) Lvl {Level}");
-            //foreach (var action in Actions)
-            //{ action.Debug(); }
+            foreach (var action in Actions.OrderBy(a=>a.RequiredJobLevel))
+            { 
+                action.Debug();
+            }
         }
 
         public void Dispose()

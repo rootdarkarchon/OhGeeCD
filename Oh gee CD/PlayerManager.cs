@@ -18,6 +18,7 @@ namespace OhGeeCD
         private readonly Framework framework;
         private readonly DataManager dataManager;
         private readonly ClientState clientState;
+        private readonly SoundManager soundManager;
         private List<Job> Jobs = new();
         private readonly SpeechSynthesizer synthesizer;
         private string lastJob = string.Empty;
@@ -26,11 +27,12 @@ namespace OhGeeCD
         public byte UseActionDetour(ActionManager* actionManager, uint actionType, uint actionID, long targetObjectID, uint param, uint useType, int pvp, bool* isGroundTarget)
             => OnUseAction(actionManager, actionType, actionID, targetObjectID, param, useType, pvp, isGroundTarget);
 
-        public PlayerManager(Framework framework, DataManager dataManager, ClientState clientState)
+        public PlayerManager(Framework framework, DataManager dataManager, ClientState clientState, SoundManager soundManager)
         {
             this.framework = framework;
             this.dataManager = dataManager;
             this.clientState = clientState;
+            this.soundManager = soundManager;
             UseActionHook = new Hook<UseActionDelegate>((IntPtr)ActionManager.fpUseAction, UseActionDetour);
             synthesizer = new SpeechSynthesizer();
             synthesizer.SetOutputToDefaultAudioDevice();
@@ -122,7 +124,9 @@ namespace OhGeeCD
                             || (action.ClassJobCategory.Value.Name.RawString.Contains(job.Abbreviation) && action.IsRoleAction))
                             && action.ActionCategory.Value.Name == "Ability" && action.ClassJobLevel > 0)
                         {
-                            job.Actions.Add(new OGCDAction(i, action.Name.RawString, TimeSpan.FromSeconds(action.Recast100ms / 10), action.CooldownGroup, action.ClassJobLevel, job.Level, synthesizer));
+                            OGCDAction ogcdaction = new OGCDAction(i, action.Name.RawString, TimeSpan.FromSeconds(action.Recast100ms / 10), action.CooldownGroup, action.ClassJobLevel, job.Level);
+                            soundManager.RegisterOGCD(ogcdaction);
+                            job.Actions.Add(ogcdaction);
                         }
                     }
                 }
@@ -134,6 +138,10 @@ namespace OhGeeCD
             foreach (var job in Jobs)
             {
                 job.Debug();
+                foreach(var action in job.Actions)
+                {
+                    action.SetTextToSpeechName("Test " + action.Name);
+                }
             }
         }
 
@@ -142,7 +150,12 @@ namespace OhGeeCD
             foreach (var job in Jobs)
             {
                 job.Dispose();
+                foreach(var action in job.Actions)
+                {
+                    soundManager.UnregisterOGCD(action);
+                }
             }
+
             UseActionHook?.Dispose();
             framework.Update -= Framework_Update;
         }

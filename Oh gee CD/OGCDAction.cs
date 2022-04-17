@@ -1,8 +1,6 @@
-﻿using Dalamud.Game.ClientState;
-using Dalamud.Logging;
+﻿using Dalamud.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using System;
-using System.Speech.Synthesis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,35 +15,33 @@ namespace OhGeeCD
         public short MaxStacks { get; private set; }
         private short currentStacks;
         readonly CancellationTokenSource cts;
-        private byte requiredLevel;
-        private readonly SpeechSynthesizer synthesizer;
+        public byte RequiredJobLevel { get; private init; }
 
         public bool IsCurrentClassJob { get; private set; }
-        public bool IsAvailable { get; private set; }
+        public bool IsAvailable => currentJobLevel >= RequiredJobLevel;
+        private uint currentJobLevel;
 
-        public void MakeActive(uint jobLevel)
-        {
-            IsCurrentClassJob = true;
-            MaxStacks = (short)ActionManager.GetMaxCharges(Id, jobLevel);
-            IsAvailable = jobLevel >= requiredLevel;
-        }
+        private string TextToSpeechName { get; set; }
 
-        public OGCDAction(uint id, string name, TimeSpan recast, byte cooldownGroup, byte requiredLevel, uint jobLevel, SpeechSynthesizer synthesizer)
+        public event EventHandler<CooldownTriggeredEventArgs>? CooldownTriggered;
+
+        public OGCDAction(uint id, string name, TimeSpan recast, byte cooldownGroup, byte requiredLevel, uint currentJobLevel)
         {
             Id = id;
             Name = name;
             Recast = recast;
+            TextToSpeechName = name;
             CooldownGroup = cooldownGroup;
-            this.requiredLevel = requiredLevel;
-            this.synthesizer = synthesizer;
-            MaxStacks = (short)ActionManager.GetMaxCharges(Id, jobLevel);
+            RequiredJobLevel = requiredLevel;
+            this.currentJobLevel = currentJobLevel;
+            MaxStacks = (short)ActionManager.GetMaxCharges(Id, currentJobLevel);
             currentStacks = MaxStacks;
             cts = new CancellationTokenSource();
         }
 
         public void Debug()
         {
-            PluginLog.Debug($"{Id}:{Name}:{MaxStacks}:{Recast}:{requiredLevel}:{IsAvailable}");
+            PluginLog.Debug($"Id:{Id} | Name:{Name} | MaxStack:{MaxStacks} | CD:{Recast.TotalSeconds}s | ReqLevel:{RequiredJobLevel} | CanCast:{IsAvailable}");
         }
 
         public void StartCountdown()
@@ -56,6 +52,11 @@ namespace OhGeeCD
         public void TriggerAdditionalCountdown(TimeSpan timeSpan)
         {
             StartCountdown(timeSpan);
+        }
+
+        public void SetTextToSpeechName(string newname)
+        {
+            TextToSpeechName = newname;
         }
 
         private void StartCountdown(TimeSpan timerOverride)
@@ -88,7 +89,7 @@ namespace OhGeeCD
                             await Task.Delay((int)recastTimer.TotalMilliseconds, cts.Token);
                             if (IsCurrentClassJob)
                             {
-                                synthesizer.Speak(Name);
+                                CooldownTriggered?.Invoke(this, new CooldownTriggeredEventArgs(TextToSpeechName, 0));
                             }
                             PluginLog.Debug($"{Name} available again!");
                             currentStacks++;
@@ -117,9 +118,17 @@ namespace OhGeeCD
             cts.Cancel();
         }
 
-        internal void MakeInactive()
+        public void MakeInactive()
         {
             IsCurrentClassJob = false;
         }
+
+        public void MakeActive(uint currentJobLevel)
+        {
+            IsCurrentClassJob = true;
+            this.currentJobLevel = currentJobLevel;
+            MaxStacks = (short)ActionManager.GetMaxCharges(Id, currentJobLevel);
+        }
+
     }
 }
