@@ -1,7 +1,12 @@
-﻿using Dalamud.Utility.Signatures;
+﻿using Dalamud.Logging;
+using Dalamud.Utility.Signatures;
+using NAudio.Wave;
 using Newtonsoft.Json;
 using System;
+using System.IO;
 using System.Speech.Synthesis;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Oh_gee_CD
 {
@@ -63,6 +68,24 @@ namespace Oh_gee_CD
             if (!string.IsNullOrEmpty(e.TextToSpeech))
             {
                 speechSynthesizer.SpeakAsync(e.TextToSpeech);
+            }
+
+            if (!string.IsNullOrEmpty(e.SoundPath))
+            {
+                if (!File.Exists(e.SoundPath)) return;
+                Task.Run(() =>
+                {
+                    using (var mf = new MediaFoundationReader(e.SoundPath))
+                    using (var wo = new WaveOutEvent())
+                    {
+                        wo.Init(mf);
+                        wo.Play();
+                        while (wo.PlaybackState == PlaybackState.Playing)
+                        {
+                            Thread.Sleep(200);
+                        }
+                    }
+                });
             }
         }
 

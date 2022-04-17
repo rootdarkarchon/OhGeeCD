@@ -10,6 +10,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Oh_gee_CD
 {
@@ -126,7 +127,7 @@ namespace Oh_gee_CD
 
                 if (ImGui.Button("Test TTS##" + action.Name))
                 {
-                    SoundEvent?.Invoke(null, new SoundEventArgs(action.TextToSpeechName, 0));
+                    SoundEvent?.Invoke(null, new SoundEventArgs(action.TextToSpeechName, null, null));
                 }
             }
 
@@ -136,7 +137,7 @@ namespace Oh_gee_CD
 
                 if (ImGui.BeginCombo("Sound Effect##" + action.Name, action.SoundEffect.ToString() == "0" ? "None" : action.SoundEffect.ToString()))
                 {
-                    if(ImGui.Selectable("None", action.SoundEffect == 0))
+                    if (ImGui.Selectable("None", action.SoundEffect == 0))
                     {
                         action.SoundEffect = 0;
                     }
@@ -151,7 +152,7 @@ namespace Oh_gee_CD
                         if (ImGui.Selectable(i.ToString(), action.SoundEffect == i))
                         {
                             action.SoundEffect = i;
-                            SoundEvent?.Invoke(null, new SoundEventArgs(string.Empty, action.SoundEffect));
+                            SoundEvent?.Invoke(null, new SoundEventArgs(null, action.SoundEffect, null));
                         }
 
                         if (i == action.SoundEffect)
@@ -166,32 +167,50 @@ namespace Oh_gee_CD
                 if (ImGui.Button("+"))
                 {
                     action.SoundEffect = action.SoundEffect + 1;
-                    if(action.SoundEffect > 80) action.SoundEffect = 80;
-                    SoundEvent?.Invoke(null, new SoundEventArgs(string.Empty, action.SoundEffect));
+                    if (action.SoundEffect > 80) action.SoundEffect = 80;
+                    SoundEvent?.Invoke(null, new SoundEventArgs(null, action.SoundEffect, null));
                 }
 
                 ImGui.SameLine();
                 if (ImGui.Button("-"))
                 {
                     action.SoundEffect = action.SoundEffect - 1;
-                    if(action.SoundEffect < 0) action.SoundEffect = 0;
-                    SoundEvent?.Invoke(null, new SoundEventArgs(string.Empty, action.SoundEffect));
+                    if (action.SoundEffect < 0) action.SoundEffect = 0;
+                    SoundEvent?.Invoke(null, new SoundEventArgs(null, action.SoundEffect, null));
                 }
 
                 int soundId = action.SoundEffect;
-
-                /*if (ImGui.InputInt("Sound Effect##TextToString" + action.Name, ref soundId, 1, 5))
-                {
-                    if (soundId < 0) soundId = 0;
-                    if (soundId > 100) soundId = 100;
-                    action.SoundEffect = soundId;
-                }*/
 
                 ImGui.SameLine();
 
                 if (ImGui.Button("Test Sound##" + action.Name))
                 {
-                    SoundEvent?.Invoke(null, new SoundEventArgs(string.Empty, soundId));
+                    SoundEvent?.Invoke(null, new SoundEventArgs(null, soundId, null));
+                }
+
+                ImGui.SetNextItemWidth(350);
+                string customSoundPath = action.SoundPath;
+                if (ImGui.InputText("##SoundPath" + action.Name, ref customSoundPath, 500))
+                {
+                    action.SoundPath = customSoundPath;
+                }
+
+                ImGui.SameLine();
+                if(ImGui.Button("Open File##" + action.Name))
+                {
+                    var fileDialog = new OpenFileDialog();
+                    fileDialog.Filter = "MP3 Files|*.mp3|OGG Files|*.ogg|WAV Files|*.wav";
+                    
+                    if(fileDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        action.SoundPath = fileDialog.FileName;
+                    }
+                }
+
+                ImGui.SameLine();
+                if (ImGui.Button("Test Sound##Custom" + action.Name))
+                {
+                    SoundEvent?.Invoke(null, new SoundEventArgs(null, null, action.SoundPath));
                 }
             }
 

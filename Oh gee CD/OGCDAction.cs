@@ -25,6 +25,8 @@ namespace Oh_gee_CD
         public bool DrawOnOGCDBar { get; set; } = false;
         [JsonProperty]
         public double EarlyCallout { get; set; } = 0;
+        [JsonProperty]
+        public string SoundPath { get; set; } = string.Empty;
 
         [JsonIgnore]
         public uint Icon { get; set; }
@@ -95,7 +97,9 @@ namespace Oh_gee_CD
                             await Task.Delay((int)(recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds), cts.Token);
                             if (IsCurrentClassJob)
                             {
-                                SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : "", SoundEffectEnabled ? SoundEffect : -1));
+                                SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
+                                    SoundEffectEnabled ? SoundEffect : null,
+                                    SoundEffectEnabled ? SoundPath : null));
                             }
                             await Task.Delay((int)(recastTimer.TotalMilliseconds - (recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds)), cts.Token);
                             PluginLog.Debug($"{Name} available again!");
@@ -115,8 +119,7 @@ namespace Oh_gee_CD
 
         private void ReduceStacks()
         {
-            if (currentStacks > 0)
-                currentStacks--;
+            currentStacks--;
             PluginLog.Debug($"Reducing stacks for {Name} to {currentStacks}");
         }
 
@@ -146,6 +149,7 @@ namespace Oh_gee_CD
             TextToSpeechName = fittingActionFromConfig.TextToSpeechName;
             TextToSpeechEnabled = fittingActionFromConfig.TextToSpeechEnabled;
             EarlyCallout = fittingActionFromConfig.EarlyCallout;
+            SoundPath = fittingActionFromConfig.SoundPath;
         }
     }
 }
