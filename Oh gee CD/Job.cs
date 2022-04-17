@@ -2,16 +2,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 
-namespace OhGeeCD
+namespace Oh_gee_CD
 {
+    [Serializable]
     public class Job : IDisposable
     {
         public string Abbreviation { get; private set; }
+        
+        [JsonIgnore]
         public string? ParentAbbreviation { get; private set; }
 
+        [JsonIgnore]
         public bool IsActive { get; private set; }
 
+        [JsonIgnore]
         public uint Level { get; private set; }
 
         public void SetLevel(uint level)

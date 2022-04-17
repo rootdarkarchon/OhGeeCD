@@ -1,4 +1,4 @@
-﻿namespace OhGeeCD
+﻿namespace Oh_gee_CD
 {
     public class CooldownTriggeredEventArgs
     {

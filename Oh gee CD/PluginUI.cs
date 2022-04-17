@@ -1,14 +1,15 @@
 ﻿using ImGuiNET;
+using Oh_gee_CD;
 using System;
 using System.Numerics;
 
-namespace OhGeeCD
+namespace Oh_gee_CD
 {
     // It is good to have this be disposable in general, in case you ever need it
     // to do any cleanup
     class PluginUI : IDisposable
     {
-        private Configuration configuration;
+        private OhGeeCDConfiguration configuration;
 
         // this extra bool exists for ImGui, since you can't ref a property
         private bool visible = false;
@@ -26,7 +27,7 @@ namespace OhGeeCD
         }
 
         // passing in the image here just for simplicity
-        public PluginUI(Configuration configuration)
+        public PluginUI(OhGeeCDConfiguration configuration)
         {
             this.configuration = configuration;
         }
@@ -59,8 +60,6 @@ namespace OhGeeCD
             ImGui.SetNextWindowSizeConstraints(new Vector2(375, 330), new Vector2(float.MaxValue, float.MaxValue));
             if (ImGui.Begin("My Amazing Window", ref visible, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
             {
-                ImGui.Text($"The random config bool is {configuration.SomePropertyToBeSavedAndWithADefault}");
-
                 if (ImGui.Button("Show Settings"))
                 {
                     SettingsVisible = true;
@@ -82,14 +81,6 @@ namespace OhGeeCD
             if (ImGui.Begin("A Wonderful Configuration Window", ref settingsVisible,
                 ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
             {
-                // can't ref a property, so use a local copy
-                var configValue = configuration.SomePropertyToBeSavedAndWithADefault;
-                if (ImGui.Checkbox("Random Config Bool", ref configValue))
-                {
-                    configuration.SomePropertyToBeSavedAndWithADefault = configValue;
-                    // can save immediately on change, if you don't want to provide a "Save and Close" button
-                    configuration.Save();
-                }
             }
             ImGui.End();
         }

@@ -2,19 +2,21 @@
 using Dalamud.Plugin;
 using System;
 
-namespace OhGeeCD
+namespace Oh_gee_CD
 {
     [Serializable]
-    public class Configuration : IPluginConfiguration
+    public class OhGeeCDConfiguration : IPluginConfiguration
     {
+        public OhGeeCDConfiguration(PlayerManager playerManager)
+        {
+            LoadedPlayerManager = playerManager;
+        }
+
         public int Version { get; set; } = 0;
-
-        public bool SomePropertyToBeSavedAndWithADefault { get; set; } = true;
-
-        // the below exist just to make saving less cumbersome
 
         [NonSerialized]
         private DalamudPluginInterface? pluginInterface;
+        public PlayerManager LoadedPlayerManager { get; set; }
 
         public void Initialize(DalamudPluginInterface pluginInterface)
         {

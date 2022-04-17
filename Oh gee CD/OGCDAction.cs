@@ -1,27 +1,35 @@
 ﻿using Dalamud.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using System;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace OhGeeCD
+namespace Oh_gee_CD
 {
+    [Serializable]
     public class OGCDAction : IDisposable
     {
-        public string Name { get; set; }
         public uint Id { get; set; }
+        public int OGCDBarId { get; set; }
+        public string TextToSpeechName { get; set; }
+
+        [JsonIgnore]
+        public string Name { get; set; }
+        [JsonIgnore]
         public TimeSpan Recast { get; set; }
+        [JsonIgnore]
         public byte CooldownGroup { get; }
+        [JsonIgnore]
         public short MaxStacks { get; private set; }
         private short currentStacks;
         readonly CancellationTokenSource cts;
+        [JsonIgnore]
         public byte RequiredJobLevel { get; private init; }
-
+        [JsonIgnore]
         public bool IsCurrentClassJob { get; private set; }
         public bool IsAvailable => currentJobLevel >= RequiredJobLevel;
         private uint currentJobLevel;
-
-        private string TextToSpeechName { get; set; }
 
         public event EventHandler<CooldownTriggeredEventArgs>? CooldownTriggered;
 

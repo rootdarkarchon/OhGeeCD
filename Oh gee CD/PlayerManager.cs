@@ -9,23 +9,31 @@ using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Speech.Synthesis;
 
-namespace OhGeeCD
+namespace Oh_gee_CD
 {
-    internal unsafe class PlayerManager : IDisposable
+    [Serializable]
+    public unsafe class PlayerManager : IDisposable
     {
         private readonly Framework framework;
         private readonly DataManager dataManager;
         private readonly ClientState clientState;
         private readonly SoundManager soundManager;
-        private List<Job> Jobs = new();
-        private readonly SpeechSynthesizer synthesizer;
+        public List<Job> Jobs { get; set; } = new();
         private string lastJob = string.Empty;
 
         public delegate byte UseActionDelegate(ActionManager* actionManager, uint actionType, uint actionID, long targetObjectID, uint param, uint useType, int pvp, bool* isGroundTarget);
         public byte UseActionDetour(ActionManager* actionManager, uint actionType, uint actionID, long targetObjectID, uint param, uint useType, int pvp, bool* isGroundTarget)
             => OnUseAction(actionManager, actionType, actionID, targetObjectID, param, useType, pvp, isGroundTarget);
+
+        public PlayerManager()
+        {
+            this.framework = null!;
+            this.dataManager = null!;
+            this.clientState = null!;
+            this.soundManager = null!;
+            UseActionHook = null!;
+        }
 
         public PlayerManager(Framework framework, DataManager dataManager, ClientState clientState, SoundManager soundManager)
         {
@@ -34,8 +42,6 @@ namespace OhGeeCD
             this.clientState = clientState;
             this.soundManager = soundManager;
             UseActionHook = new Hook<UseActionDelegate>((IntPtr)ActionManager.fpUseAction, UseActionDetour);
-            synthesizer = new SpeechSynthesizer();
-            synthesizer.SetOutputToDefaultAudioDevice();
         }
 
 
@@ -64,6 +70,7 @@ namespace OhGeeCD
             }
         }
 
+        [NonSerialized]
         public Hook<UseActionDelegate> UseActionHook;
 
         public byte OnUseAction(ActionManager* actionManager, uint actionType, uint actionID, long targetObjectID, uint param, uint useType, int pvp, bool* isGroundTarget)

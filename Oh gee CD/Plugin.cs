@@ -5,9 +5,10 @@ using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
 using Dalamud.IoC;
 using Dalamud.Plugin;
+using Oh_gee_CD;
 using System;
 
-namespace OhGeeCD
+namespace Oh_gee_CD
 {
     public unsafe sealed class Plugin : IDalamudPlugin
     {
@@ -15,14 +16,12 @@ namespace OhGeeCD
 
         private const string commandName = "/pohgeecd";
 
-        private Framework Framework { init; get; } 
-
         private DalamudPluginInterface PluginInterface { get; init; }
         private CommandManager CommandManager { get; init; }
         public ClientState ClientState { get; }
         public ChatGui ChatHandlers { get; }
         public DataManager DataManager { get; }
-        private Configuration Configuration { get; init; }
+        private OhGeeCDConfiguration Configuration { get; init; }
         private PluginUI PluginUi { get; init; }
 
         private PlayerManager playerManager;
@@ -39,10 +38,9 @@ namespace OhGeeCD
             ClientState = clientState;
             ChatHandlers = chatHandlers;
             DataManager = dataManager;
-            Framework = framework;
             soundManager = new SoundManager();
             playerManager = new PlayerManager(framework, dataManager, clientState, soundManager);
-            Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            Configuration = PluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager);
             Configuration.Initialize(PluginInterface);
 
             PluginUi = new PluginUI(Configuration);
@@ -63,6 +61,8 @@ namespace OhGeeCD
             PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
             playerManager.Initialize();
+
+            Configuration.Save();
         }
 
         public void Dispose()
