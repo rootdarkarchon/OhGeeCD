@@ -111,7 +111,7 @@ namespace Oh_gee_CD
                         {
                             PluginLog.Debug($"Looping for {Name}: {currentStacks}/{MaxStacks}, from now: +{recastTimer.TotalSeconds}s");
                             await Task.Delay((int)(recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds), cts.Token);
-                            if (IsCurrentClassJob)
+                            if (IsCurrentClassJob && timerOverride == TimeSpan.Zero)
                             {
                                 SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : "", SoundEffectEnabled ? SoundEffect : -1));
                             }
