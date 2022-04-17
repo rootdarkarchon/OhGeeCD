@@ -1,0 +1,13 @@
+{
+  "Author": "darkarchon",
+  "Name": "Oh gee, CD",
+  "Punchline": "oGCD helper",
+  "Description": "A description that shows up in /xlplugins. List any major slash-command(s).",
+  "InternalName": "ohgeecd",
+  "ApplicableVersion": "any",
+  "Tags": [
+    "sample",
+    "plugin",
+    "goats"
+  ]
+}

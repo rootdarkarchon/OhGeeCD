@@ -23,7 +23,7 @@ namespace SamplePlugin
 
         public void Save()
         {
-            this.pluginInterface!.SavePluginConfig(this);
+            pluginInterface!.SavePluginConfig(this);
         }
     }
 }
