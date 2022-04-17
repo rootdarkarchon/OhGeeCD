@@ -23,7 +23,7 @@ namespace Oh_gee_CD
         {
             SizeConstraints = new WindowSizeConstraints()
             {
-                MinimumSize = new(600, 300),
+                MinimumSize = new(700, 300),
                 MaximumSize = new(9999, 9999)
             };
 
@@ -84,7 +84,7 @@ namespace Oh_gee_CD
                 ImGui.TextDisabled(action.Name);
                 DrawHelper($"You currently cannot execute this ability, your {job.Abbreviation} is level {job.Level}, ability is level {action.RequiredJobLevel}.");
             }
-            ImGui.SameLine(200);
+            ImGui.SameLine(300);
 
             bool ttsEnabled = action.TextToSpeechEnabled;
             if (ImGui.Checkbox("Play TTS##" + action.Name, ref ttsEnabled))
@@ -92,7 +92,7 @@ namespace Oh_gee_CD
                 action.TextToSpeechEnabled = ttsEnabled;
             }
 
-            ImGui.SameLine(300);
+            ImGui.SameLine(400);
 
             bool soundEnabled = action.SoundEffectEnabled;
             if (ImGui.Checkbox("Play Sound##" + action.Name, ref soundEnabled))
@@ -100,7 +100,7 @@ namespace Oh_gee_CD
                 action.SoundEffectEnabled = soundEnabled;
             }
 
-            ImGui.SameLine(410);
+            ImGui.SameLine(510);
 
             bool onGCDBar = action.DrawOnOGCDBar;
             if (ImGui.Checkbox("On OGCDBar##" + action.Name, ref onGCDBar))

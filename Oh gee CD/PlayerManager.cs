@@ -84,11 +84,14 @@ namespace Oh_gee_CD
 
             if (ret == 0) return ret;
 
-            var action = Jobs.First(j => j.IsActive).Actions.First(a => a.Id == adjustedActionId);
-            action.StartCountdown();
-            foreach (var act in Jobs.SelectMany(j => j.Actions.Where(a => a.CooldownGroup == action.CooldownGroup && a != action)))
+            var action = Jobs.FirstOrDefault(j => j.IsActive)?.Actions.First(a => a.Id == adjustedActionId);
+            if (action != null)
             {
-                act.TriggerAdditionalCountdown(action.Recast);
+                action.StartCountdown();
+                foreach (var act in Jobs.SelectMany(j => j.Actions.Where(a => a.CooldownGroup == action.CooldownGroup && a != action)))
+                {
+                    act.TriggerAdditionalCountdown(action.Recast);
+                }
             }
 
             return ret;
