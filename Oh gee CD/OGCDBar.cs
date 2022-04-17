@@ -14,6 +14,8 @@ namespace Oh_gee_CD
         public OGCDBarVerticalLayout VerticalLayout { get; set; }
         public int HorizontalPadding { get; set; }
         public int VerticalPadding { get; set; }
+        public int MaxItemsHorizontal { get; set; }
+        public int MaxItemsVertical { get; set; }
     }
 
     public enum OGCDBarHorizontalLayout

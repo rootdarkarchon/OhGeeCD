@@ -3,8 +3,11 @@ using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
+using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
+using Dalamud.Logging;
 using Dalamud.Plugin;
+using Dalamud.Utility.Signatures;
 using Oh_gee_CD;
 using System;
 
@@ -26,22 +29,29 @@ namespace Oh_gee_CD
 
         private PlayerManager playerManager;
         private SoundManager soundManager;
+        private WindowSystem system;
+        private SettingsUI ui;
 
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
             [RequiredVersion("1.0")] CommandManager commandManager,
             ClientState clientState, ChatGui chatHandlers, DataManager dataManager,
-            Framework framework, SigScanner sigScanner)
+            Framework framework)
         {
             PluginInterface = pluginInterface;
             CommandManager = commandManager;
             ClientState = clientState;
             ChatHandlers = chatHandlers;
             DataManager = dataManager;
-            soundManager = new SoundManager(sigScanner);
+            soundManager = new SoundManager();
             playerManager = new PlayerManager(framework, dataManager, clientState, soundManager);
             Configuration = PluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager);
             Configuration.Initialize(PluginInterface);
+            system = new WindowSystem("OhGeeCD");
+            ui = new SettingsUI(playerManager, system);
+            soundManager.RegisterSoundSource(ui);
+
+            commandManager.AddHandler(commandName, new CommandInfo(OnCommand));
 
             PluginUi = new PluginUI(Configuration);
 
@@ -68,26 +78,27 @@ namespace Oh_gee_CD
 
         public void Dispose()
         {
+            Configuration.Save();
+            soundManager.UnregisterSoundSource(ui);
+
+            CommandManager.RemoveHandler(commandName);
             playerManager.Dispose();
             PluginUi.Dispose();
-            CommandManager.RemoveHandler(commandName);
         }
 
         private void OnCommand(string command, string args)
         {
-            // in response to the slash command, just display our main ui
-            //PluginUi.Visible = true;
-
+            ui.Toggle();
         }
 
         private void DrawUI()
         {
-            PluginUi.Draw();
+            system.Draw();
         }
 
         private void DrawConfigUI()
         {
-            PluginUi.SettingsVisible = true;
+            ui.Toggle();
         }
     }
 }

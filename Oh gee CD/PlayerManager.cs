@@ -119,6 +119,8 @@ namespace Oh_gee_CD
                 }
             }
 
+            Jobs = Jobs.OrderBy(j => j.Abbreviation).ToList();
+
             var actions = dataManager.Excel.GetSheet<Lumina.Excel.GeneratedSheets.Action>();
 
             for (uint i = 0; i < actions.RowCount; i++)
@@ -135,10 +137,11 @@ namespace Oh_gee_CD
                             && action.ActionCategory.Value.Name == "Ability" && action.ClassJobLevel > 0)
                         {
                             OGCDAction ogcdaction = new OGCDAction(i, action.Name.RawString, TimeSpan.FromSeconds(action.Recast100ms / 10), action.CooldownGroup, action.ClassJobLevel, job.Level);
-                            SoundManager.RegisterOGCD(ogcdaction);
+                            SoundManager.RegisterSoundSource(ogcdaction);
                             job.Actions.Add(ogcdaction);
                         }
                     }
+                    job.Actions = job.Actions.OrderBy(a => a.RequiredJobLevel).ToList();
                 }
             }
 
@@ -178,7 +181,7 @@ namespace Oh_gee_CD
                 job.Dispose();
                 foreach (var action in job.Actions)
                 {
-                    SoundManager.UnregisterOGCD(action);
+                    SoundManager.UnregisterSoundSource(action);
                 }
             }
 

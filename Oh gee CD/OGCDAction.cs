@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 namespace Oh_gee_CD
 {
     [Serializable]
-    public class OGCDAction : IDisposable
+    public class OGCDAction : IDisposable, ISoundSource
     {
         [JsonProperty]
         public uint Id { get; set; }
@@ -22,6 +22,8 @@ namespace Oh_gee_CD
         public bool SoundEffectEnabled { get; set; } = false;
         [JsonProperty]
         public bool TextToSpeechEnabled { get; set; } = false;
+        [JsonProperty]
+        public double EarlyCallout { get; set; } = 0;
 
         [JsonIgnore]
         public string Name { get; set; }
@@ -41,7 +43,7 @@ namespace Oh_gee_CD
         public bool IsAvailable => currentJobLevel >= RequiredJobLevel;
         private uint currentJobLevel;
 
-        public event EventHandler<CooldownTriggeredEventArgs>? CooldownTriggered;
+        public event EventHandler<SoundEventArgs>? SoundEvent;
 
         public OGCDAction(uint id, string name, TimeSpan recast, byte cooldownGroup, byte requiredLevel, uint currentJobLevel)
         {
@@ -104,11 +106,12 @@ namespace Oh_gee_CD
                         do
                         {
                             PluginLog.Debug($"Looping for {Name}: {currentStacks}/{MaxStacks}, from now: +{recastTimer.TotalSeconds}s");
-                            await Task.Delay((int)recastTimer.TotalMilliseconds, cts.Token);
+                            await Task.Delay((int)(recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds), cts.Token);
                             if (IsCurrentClassJob)
                             {
-                                CooldownTriggered?.Invoke(this, new CooldownTriggeredEventArgs(TextToSpeechEnabled ? TextToSpeechName : "", SoundEffectEnabled ? SoundEffect : -1));
+                                SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : "", SoundEffectEnabled ? SoundEffect : -1));
                             }
+                            await Task.Delay((int)(recastTimer.TotalMilliseconds - (recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds)), cts.Token);
                             PluginLog.Debug($"{Name} available again!");
                             currentStacks++;
 
@@ -155,6 +158,7 @@ namespace Oh_gee_CD
             SoundEffectEnabled = fittingActionFromConfig.SoundEffectEnabled;
             TextToSpeechName = fittingActionFromConfig.TextToSpeechName;
             TextToSpeechEnabled = fittingActionFromConfig.TextToSpeechEnabled;
+            EarlyCallout = fittingActionFromConfig.EarlyCallout;
         }
     }
 }

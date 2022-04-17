@@ -1,17 +1,18 @@
-﻿using Dalamud.Game;
-using Dalamud.Logging;
+﻿using Dalamud.Utility.Signatures;
 using Newtonsoft.Json;
 using System;
-using System.Runtime.InteropServices;
 using System.Speech.Synthesis;
 
 namespace Oh_gee_CD
 {
     [Serializable]
-    public class SoundManager : IDisposable
+    public unsafe class SoundManager : IDisposable
     {
         public delegate long PlaySoundEffectDelegate(int a1, long a2, long a3, int a4);
-        public static PlaySoundEffectDelegate PlayGameSoundEffect { get; private set; }
+
+        [Signature("E8 ?? ?? ?? ?? 4D 39 BE ?? ?? ?? ??")]
+        private readonly PlaySoundEffectDelegate PlayGameSoundEffect = null!;
+
         private SpeechSynthesizer speechSynthesizer;
         [JsonProperty]
         public int TTSVolume
@@ -19,46 +20,48 @@ namespace Oh_gee_CD
             get => ttsVolume; set
             {
                 ttsVolume = value;
-                if(speechSynthesizer != null)
+                if (speechSynthesizer != null)
                     speechSynthesizer.Volume = ttsVolume;
             }
         }
         private int ttsVolume = 100;
 
-        public SoundManager(SigScanner scanner)
+        public SoundManager()
         {
             speechSynthesizer = new SpeechSynthesizer();
             speechSynthesizer.SetOutputToDefaultAudioDevice();
-            PlayGameSoundEffect = Marshal.GetDelegateForFunctionPointer<PlaySoundEffectDelegate>(scanner.ScanText("E8 ?? ?? ?? ?? 4D 39 BE ?? ?? ?? ??"));
+            SignatureHelper.Initialise(this);
         }
 
-        public static void PlaySoundEffect(int soundEffect)
+        public void PlaySoundEffect(int soundEffect)
         {
             if (soundEffect == 19 || soundEffect == 21) return;
             if (soundEffect <= 0) return;
-            PlayGameSoundEffect(soundEffect, 0, 0, 0);
+            if (PlayGameSoundEffect != null)
+            {
+                _ = PlayGameSoundEffect(soundEffect, 0, 0, 0);
+            }
         }
 
-        public void RegisterOGCD(OGCDAction ogcdAction)
+        public void RegisterSoundSource(ISoundSource soundSource)
         {
-            ogcdAction.CooldownTriggered += OgcdAction_CooldownTriggered;
+            soundSource.SoundEvent += SoundEventTriggered;
         }
 
-        public void UnregisterOGCD(OGCDAction oGCDAction)
+        public void UnregisterSoundSource(ISoundSource soundSource)
         {
-            oGCDAction.CooldownTriggered -= OgcdAction_CooldownTriggered;
+            soundSource.SoundEvent -= SoundEventTriggered;
         }
 
-        private void OgcdAction_CooldownTriggered(object? sender, CooldownTriggeredEventArgs e)
+        private void SoundEventTriggered(object? sender, SoundEventArgs e)
         {
-            if (e.SoundId != 0)
+            if (e.SoundId > 0)
             {
                 PlaySoundEffect(e.SoundId);
             }
 
             if (!string.IsNullOrEmpty(e.TextToSpeech))
             {
-                PluginLog.Debug("Playing: " + e.TextToSpeech);
                 speechSynthesizer.SpeakAsync(e.TextToSpeech);
             }
         }
