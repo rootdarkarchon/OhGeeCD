@@ -3,8 +3,6 @@ using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
-using Dalamud.Game.Network;
-using Dalamud.Game.Text;
 using Dalamud.Hooking;
 using Dalamud.IoC;
 using Dalamud.Logging;
@@ -15,10 +13,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Speech.Synthesis;
 using System.Threading;
 using System.Threading.Tasks;
@@ -138,6 +133,7 @@ namespace SamplePlugin
                 if (job.Abbreviation == lastJob || job.ParentAbbreviation == lastJob)
                 {
                     job.MakeActive();
+                    job.SetLevel(State.LocalPlayer.Level);
                 }
                 else
                 {
@@ -211,6 +207,7 @@ namespace SamplePlugin
 
         public void SetLevel(short level)
         {
+            PluginLog.Debug($"Setting level of {Abbreviation} to {level}");
             Level = level;
         }
 
@@ -248,9 +245,9 @@ namespace SamplePlugin
 
         public void Debug()
         {
-            PluginLog.Debug($"{Abbreviation} ({ParentAbbreviation})");
-            foreach (var action in Actions)
-            { action.Debug(); }
+            PluginLog.Debug($"{Abbreviation} ({ParentAbbreviation}) Lvl {Level}");
+            //foreach (var action in Actions)
+            //{ action.Debug(); }
         }
 
         public void Dispose()
