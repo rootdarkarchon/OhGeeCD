@@ -68,33 +68,15 @@ namespace Oh_gee_CD
             PluginLog.Debug($"Id:{Id} | Name:{Name} | MaxStack:{MaxStacks} | CD:{Recast.TotalSeconds}s | ReqLevel:{RequiredJobLevel} | CanCast:{IsAvailable}");
         }
 
-        public void StartCountdown()
-        {
-            StartCountdown(TimeSpan.Zero);
-        }
-
-        public void TriggerAdditionalCountdown(TimeSpan timeSpan)
-        {
-            StartCountdown(timeSpan);
-        }
-
         public void SetTextToSpeechName(string newname)
         {
             TextToSpeechName = newname;
         }
 
-        private void StartCountdown(TimeSpan timerOverride)
+        public void StartCountdown()
         {
             TimeSpan recastTimer = Recast;
-            if (timerOverride != TimeSpan.Zero)
-            {
-                recastTimer = timerOverride;
-                PluginLog.Debug($"Triggered in addition: {Name}");
-            }
-            else
-            {
-                PluginLog.Debug($"Casted {Name}");
-            }
+            PluginLog.Debug($"Casted {Name}");
 
             if (MaxStacks > 1 && currentStacks != MaxStacks)
             {
@@ -111,7 +93,7 @@ namespace Oh_gee_CD
                         {
                             PluginLog.Debug($"Looping for {Name}: {currentStacks}/{MaxStacks}, from now: +{recastTimer.TotalSeconds}s");
                             await Task.Delay((int)(recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds), cts.Token);
-                            if (IsCurrentClassJob && timerOverride == TimeSpan.Zero)
+                            if (IsCurrentClassJob)
                             {
                                 SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : "", SoundEffectEnabled ? SoundEffect : -1));
                             }
@@ -133,7 +115,8 @@ namespace Oh_gee_CD
 
         private void ReduceStacks()
         {
-            currentStacks--;
+            if (currentStacks > 0)
+                currentStacks--;
             PluginLog.Debug($"Reducing stacks for {Name} to {currentStacks}");
         }
 

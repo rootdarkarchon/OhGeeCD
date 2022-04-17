@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,7 +20,7 @@ namespace Oh_gee_CD
         private readonly DataManager dataManager;
         private readonly Dictionary<uint, TextureWrap> textures = new();
 
-        public SettingsUI(PlayerManager manager, WindowSystem system, DataManager dataManager) : base("Oh gee, CD Settings")
+        public SettingsUI(PlayerManager manager, WindowSystem system, DataManager dataManager) : base("Oh gee, CD Settings v" + Assembly.GetExecutingAssembly().GetName().Version)
         {
             SizeConstraints = new WindowSizeConstraints()
             {
@@ -131,17 +132,62 @@ namespace Oh_gee_CD
 
             if (action.SoundEffectEnabled)
             {
-                int soundId = action.SoundEffect;
                 ImGui.SetNextItemWidth(150);
 
-                if (ImGui.InputInt("Sound Effect##TextToString" + action.Name, ref soundId, 1, 5))
+                if (ImGui.BeginCombo("Sound Effect##" + action.Name, action.SoundEffect.ToString() == "0" ? "None" : action.SoundEffect.ToString()))
+                {
+                    if(ImGui.Selectable("None", action.SoundEffect == 0))
+                    {
+                        action.SoundEffect = 0;
+                    }
+
+                    if (0 == action.SoundEffect)
+                    {
+                        ImGui.SetItemDefaultFocus();
+                    }
+
+                    for (int i = 1; i < 80; i++)
+                    {
+                        if (ImGui.Selectable(i.ToString(), action.SoundEffect == i))
+                        {
+                            action.SoundEffect = i;
+                            SoundEvent?.Invoke(null, new SoundEventArgs(string.Empty, action.SoundEffect));
+                        }
+
+                        if (i == action.SoundEffect)
+                        {
+                            ImGui.SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui.EndCombo();
+                }
+
+                ImGui.SameLine();
+                if (ImGui.Button("+"))
+                {
+                    action.SoundEffect = action.SoundEffect + 1;
+                    if(action.SoundEffect > 80) action.SoundEffect = 80;
+                    SoundEvent?.Invoke(null, new SoundEventArgs(string.Empty, action.SoundEffect));
+                }
+
+                ImGui.SameLine();
+                if (ImGui.Button("-"))
+                {
+                    action.SoundEffect = action.SoundEffect - 1;
+                    if(action.SoundEffect < 0) action.SoundEffect = 0;
+                    SoundEvent?.Invoke(null, new SoundEventArgs(string.Empty, action.SoundEffect));
+                }
+
+                int soundId = action.SoundEffect;
+
+                /*if (ImGui.InputInt("Sound Effect##TextToString" + action.Name, ref soundId, 1, 5))
                 {
                     if (soundId < 0) soundId = 0;
                     if (soundId > 100) soundId = 100;
                     action.SoundEffect = soundId;
-                }
+                }*/
 
-                ImGui.SameLine(280);
+                ImGui.SameLine();
 
                 if (ImGui.Button("Test Sound##" + action.Name))
                 {

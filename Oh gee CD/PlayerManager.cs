@@ -88,10 +88,6 @@ namespace Oh_gee_CD
             if (action != null)
             {
                 action.StartCountdown();
-                foreach (var act in Jobs.SelectMany(j => j.Actions.Where(a => a.CooldownGroup == action.CooldownGroup && a != action)))
-                {
-                    act.TriggerAdditionalCountdown(action.Recast);
-                }
             }
 
             return ret;
