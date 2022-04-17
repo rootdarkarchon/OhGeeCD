@@ -2,15 +2,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace Oh_gee_CD
 {
     [Serializable]
     public class Job : IDisposable
     {
+        [JsonProperty]
         public string Abbreviation { get; private set; }
-        
+
         [JsonIgnore]
         public string? ParentAbbreviation { get; private set; }
 
@@ -61,8 +62,8 @@ namespace Oh_gee_CD
         public void Debug()
         {
             PluginLog.Debug($"{Abbreviation} ({ParentAbbreviation}) Lvl {Level}");
-            foreach (var action in Actions.OrderBy(a=>a.RequiredJobLevel))
-            { 
+            foreach (var action in Actions.OrderBy(a => a.RequiredJobLevel))
+            {
                 action.Debug();
             }
         }

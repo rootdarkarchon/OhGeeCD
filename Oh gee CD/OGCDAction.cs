@@ -1,18 +1,27 @@
 ﻿using Dalamud.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using System;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Oh_gee_CD
 {
     [Serializable]
     public class OGCDAction : IDisposable
     {
+        [JsonProperty]
         public uint Id { get; set; }
+        [JsonProperty]
         public int OGCDBarId { get; set; }
+        [JsonProperty]
         public string TextToSpeechName { get; set; }
+        [JsonProperty]
+        public int SoundEffect { get; set; }
+        [JsonProperty]
+        public bool SoundEffectEnabled { get; set; } = false;
+        [JsonProperty]
+        public bool TextToSpeechEnabled { get; set; } = false;
 
         [JsonIgnore]
         public string Name { get; set; }
@@ -28,6 +37,7 @@ namespace Oh_gee_CD
         public byte RequiredJobLevel { get; private init; }
         [JsonIgnore]
         public bool IsCurrentClassJob { get; private set; }
+        [JsonIgnore]
         public bool IsAvailable => currentJobLevel >= RequiredJobLevel;
         private uint currentJobLevel;
 
@@ -97,7 +107,7 @@ namespace Oh_gee_CD
                             await Task.Delay((int)recastTimer.TotalMilliseconds, cts.Token);
                             if (IsCurrentClassJob)
                             {
-                                CooldownTriggered?.Invoke(this, new CooldownTriggeredEventArgs(TextToSpeechName, 0));
+                                CooldownTriggered?.Invoke(this, new CooldownTriggeredEventArgs(TextToSpeechEnabled ? TextToSpeechName : "", SoundEffectEnabled ? SoundEffect : -1));
                             }
                             PluginLog.Debug($"{Name} available again!");
                             currentStacks++;
@@ -138,5 +148,13 @@ namespace Oh_gee_CD
             MaxStacks = (short)ActionManager.GetMaxCharges(Id, currentJobLevel);
         }
 
+        public void UpdateValuesFromOtherAction(OGCDAction fittingActionFromConfig)
+        {
+            OGCDBarId = fittingActionFromConfig.OGCDBarId;
+            SoundEffect = fittingActionFromConfig.SoundEffect;
+            SoundEffectEnabled = fittingActionFromConfig.SoundEffectEnabled;
+            TextToSpeechName = fittingActionFromConfig.TextToSpeechName;
+            TextToSpeechEnabled = fittingActionFromConfig.TextToSpeechEnabled;
+        }
     }
 }

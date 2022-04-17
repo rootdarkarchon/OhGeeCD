@@ -31,14 +31,14 @@ namespace Oh_gee_CD
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
             [RequiredVersion("1.0")] CommandManager commandManager,
             ClientState clientState, ChatGui chatHandlers, DataManager dataManager,
-            Framework framework)
+            Framework framework, SigScanner sigScanner)
         {
             PluginInterface = pluginInterface;
             CommandManager = commandManager;
             ClientState = clientState;
             ChatHandlers = chatHandlers;
             DataManager = dataManager;
-            soundManager = new SoundManager();
+            soundManager = new SoundManager(sigScanner);
             playerManager = new PlayerManager(framework, dataManager, clientState, soundManager);
             Configuration = PluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager);
             Configuration.Initialize(PluginInterface);
@@ -60,7 +60,8 @@ namespace Oh_gee_CD
             PluginInterface.UiBuilder.Draw += DrawUI;
             PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
-            playerManager.Initialize();
+            playerManager.Initialize(Configuration);
+            Configuration.LoadedPlayerManager = playerManager;
 
             Configuration.Save();
         }

@@ -2,10 +2,12 @@
 using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.Hooking;
+using Dalamud.Logging;
 using FFXIVClientStructs;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel.GeneratedSheets;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,8 +20,10 @@ namespace Oh_gee_CD
         private readonly Framework framework;
         private readonly DataManager dataManager;
         private readonly ClientState clientState;
-        private readonly SoundManager soundManager;
+        [JsonProperty]
+        public SoundManager SoundManager { get; init; }
         public List<Job> Jobs { get; set; } = new();
+        public List<OGCDBar> OGCDBars { get; set; } = new();
         private string lastJob = string.Empty;
 
         public delegate byte UseActionDelegate(ActionManager* actionManager, uint actionType, uint actionID, long targetObjectID, uint param, uint useType, int pvp, bool* isGroundTarget);
@@ -31,7 +35,7 @@ namespace Oh_gee_CD
             this.framework = null!;
             this.dataManager = null!;
             this.clientState = null!;
-            this.soundManager = null!;
+            this.SoundManager = null!;
             UseActionHook = null!;
         }
 
@@ -40,7 +44,7 @@ namespace Oh_gee_CD
             this.framework = framework;
             this.dataManager = dataManager;
             this.clientState = clientState;
-            this.soundManager = soundManager;
+            this.SoundManager = soundManager;
             UseActionHook = new Hook<UseActionDelegate>((IntPtr)ActionManager.fpUseAction, UseActionDetour);
         }
 
@@ -80,8 +84,7 @@ namespace Oh_gee_CD
 
             if (ret == 0) return ret;
 
-            var job = Jobs.First(j => j.IsActive);
-            var action = job.Actions.First(a => a.Id == adjustedActionId);
+            var action = Jobs.First(j => j.IsActive).Actions.First(a => a.Id == adjustedActionId);
             action.StartCountdown();
             foreach (var act in Jobs.SelectMany(j => j.Actions.Where(a => a.CooldownGroup == action.CooldownGroup && a != action)))
             {
@@ -91,7 +94,7 @@ namespace Oh_gee_CD
             return ret;
         }
 
-        public void Initialize()
+        public void Initialize(OhGeeCDConfiguration configuration)
         {
             Resolver.Initialize();
             var levels = UIState.Instance()->PlayerState.ClassJobLevelArray;
@@ -132,24 +135,40 @@ namespace Oh_gee_CD
                             && action.ActionCategory.Value.Name == "Ability" && action.ClassJobLevel > 0)
                         {
                             OGCDAction ogcdaction = new OGCDAction(i, action.Name.RawString, TimeSpan.FromSeconds(action.Recast100ms / 10), action.CooldownGroup, action.ClassJobLevel, job.Level);
-                            soundManager.RegisterOGCD(ogcdaction);
+                            SoundManager.RegisterOGCD(ogcdaction);
                             job.Actions.Add(ogcdaction);
                         }
                     }
                 }
             }
 
+            RestoreDataFromConfiguration(configuration);
+
             framework.Update += Framework_Update;
             UseActionHook.Enable();
+        }
 
-            foreach (var job in Jobs)
+        private void RestoreDataFromConfiguration(OhGeeCDConfiguration configuration)
+        {
+            foreach (var job in configuration.LoadedPlayerManager.Jobs)
             {
-                job.Debug();
-                foreach(var action in job.Actions)
+                var initJob = Jobs.First(j => j.Abbreviation == job.Abbreviation);
+                foreach (var action in initJob.Actions)
                 {
-                    action.SetTextToSpeechName("Test " + action.Name);
+                    var fittingActionFromConfig = job.Actions.FirstOrDefault(a => a.Id == action.Id);
+                    if (fittingActionFromConfig != null)
+                        action.UpdateValuesFromOtherAction(fittingActionFromConfig);
                 }
             }
+
+            foreach (var bar in configuration.LoadedPlayerManager.OGCDBars)
+            {
+                OGCDBars.Add(bar);
+            }
+
+            var ttsVolume = configuration.LoadedPlayerManager.SoundManager?.TTSVolume;
+            PluginLog.Debug("TTS Volume: " + ttsVolume);
+            SoundManager.TTSVolume = configuration.LoadedPlayerManager.SoundManager?.TTSVolume ?? 100;
         }
 
         public void Dispose()
@@ -157,9 +176,9 @@ namespace Oh_gee_CD
             foreach (var job in Jobs)
             {
                 job.Dispose();
-                foreach(var action in job.Actions)
+                foreach (var action in job.Actions)
                 {
-                    soundManager.UnregisterOGCD(action);
+                    SoundManager.UnregisterOGCD(action);
                 }
             }
 
