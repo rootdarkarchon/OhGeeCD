@@ -12,14 +12,10 @@ namespace Oh_gee_CD
 
         public readonly Dictionary<uint, TextureWrap> textures = new();
         private readonly DataManager dataManager;
-        public ImFontPtr LargeFont;
 
         public DrawHelper(DataManager dataManager)
         {
             this.dataManager = dataManager;
-            var io = ImGui.GetIO();
-
-            //LargeFont = io.Fonts.AddFontFromFileTTF(@"C:\Users\darkarchon\source\repos\Oh gee CD\Oh gee CD\bin\x64\Debug\impact.ttf", 20);
         }
 
 
@@ -59,8 +55,10 @@ namespace Oh_gee_CD
             }
 
             ptr.AddImage(hqicon.ImGuiHandle, p1, p2);
-            //ImGui.Image(hqicon.ImGuiHandle, size);
         }
+
+        public static uint Color(byte r, byte g, byte b, byte a) { uint ret = a; ret <<= 8; ret += b; ret <<= 8; ret += g; ret <<= 8; ret += r; return ret; }
+
 
         public static void DrawHelpText(string helpText)
         {

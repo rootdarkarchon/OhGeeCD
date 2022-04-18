@@ -17,7 +17,7 @@ namespace Oh_gee_CD
 
         [Signature("E8 ?? ?? ?? ?? 4D 39 BE ?? ?? ?? ??")]
         private readonly PlaySoundEffectDelegate PlayGameSoundEffect = null!;
-
+        private PlayerManager playerManager;
         private SpeechSynthesizer speechSynthesizer;
         [JsonProperty]
         public int TTSVolume
@@ -75,6 +75,8 @@ namespace Oh_gee_CD
 
         private void SoundEventTriggered(object? sender, SoundEventArgs e)
         {
+            if (playerManager.CutsceneActive || (!playerManager.InCombat && playerManager.HideOutOfCombat)) return;
+
             if (e.SoundId > 0)
             {
                 PlaySoundEffect(e.SoundId);
@@ -107,6 +109,11 @@ namespace Oh_gee_CD
         public void Dispose()
         {
             speechSynthesizer.Dispose();
+        }
+
+        internal void SetPlayerManager(PlayerManager playerManager)
+        {
+            this.playerManager = playerManager;
         }
     }
 }

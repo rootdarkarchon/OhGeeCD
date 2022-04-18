@@ -1,14 +1,12 @@
 ﻿using Dalamud.Data;
 using Dalamud.Game;
 using Dalamud.Game.ClientState;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
-using Dalamud.Logging;
 using Dalamud.Plugin;
-using Dalamud.Utility.Signatures;
-using Oh_gee_CD;
 using System;
 
 namespace Oh_gee_CD
@@ -36,7 +34,7 @@ namespace Oh_gee_CD
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
             [RequiredVersion("1.0")] CommandManager commandManager,
             ClientState clientState, ChatGui chatHandlers, DataManager dataManager,
-            Framework framework)
+            Framework framework, Condition condition)
         {
             PluginInterface = pluginInterface;
             CommandManager = commandManager;
@@ -47,10 +45,10 @@ namespace Oh_gee_CD
             drawHelper = new DrawHelper(dataManager);
             system = new WindowSystem("OhGeeCD");
 
-            playerManager = new PlayerManager(framework, dataManager, clientState, soundManager, system, drawHelper);
+            playerManager = new PlayerManager(framework, dataManager, clientState, soundManager, system, drawHelper, condition);
             Configuration = PluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager);
             Configuration.Initialize(PluginInterface);
-            ui = new SettingsUI(playerManager, system, dataManager, drawHelper);
+            ui = new SettingsUI(playerManager, system, drawHelper);
             soundManager.RegisterSoundSource(ui);
 
             commandManager.AddHandler(commandName, new CommandInfo(OnCommand));

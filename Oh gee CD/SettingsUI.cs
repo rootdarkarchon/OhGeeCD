@@ -1,13 +1,9 @@
-﻿using Dalamud.Data;
-using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
+﻿using Dalamud.Interface.Windowing;
 using ImGuiNET;
 using System;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Oh_gee_CD
@@ -17,10 +13,9 @@ namespace Oh_gee_CD
     {
         private readonly PlayerManager manager;
         private readonly WindowSystem system;
-        private readonly DataManager dataManager;
         private readonly DrawHelper drawHelper;
 
-        public SettingsUI(PlayerManager manager, WindowSystem system, DataManager dataManager, DrawHelper drawHelper) : base("Oh gee, CD Settings v" + Assembly.GetExecutingAssembly().GetName().Version)
+        public SettingsUI(PlayerManager manager, WindowSystem system, DrawHelper drawHelper) : base("Oh gee, CD Settings v" + Assembly.GetExecutingAssembly().GetName().Version)
         {
             SizeConstraints = new WindowSizeConstraints()
             {
@@ -31,7 +26,6 @@ namespace Oh_gee_CD
             system.AddWindow(this);
             this.manager = manager;
             this.system = system;
-            this.dataManager = dataManager;
             this.drawHelper = drawHelper;
             if (manager.OGCDBars.Count > 0) selectedOGCDIndex = 0;
         }
@@ -43,7 +37,7 @@ namespace Oh_gee_CD
 
         public override void Draw()
         {
-            if (!IsOpen) return;
+            if (!IsOpen || manager.CutsceneActive) return;
 
             ImGui.BeginTabBar("MainTabBar");
             if (ImGui.BeginTabItem("General"))
@@ -213,6 +207,12 @@ namespace Oh_gee_CD
 
         private void DrawGeneralSettings()
         {
+            bool hideOutOfCombat = manager.HideOutOfCombat;
+            if (ImGui.Checkbox("Hide out of combat", ref hideOutOfCombat))
+            {
+                manager.HideOutOfCombat = hideOutOfCombat;
+            }
+
             int textToSpeechVolume = manager.SoundManager.TTSVolume;
             if (ImGui.SliderInt("TTS Volume##", ref textToSpeechVolume, 0, 100))
             {

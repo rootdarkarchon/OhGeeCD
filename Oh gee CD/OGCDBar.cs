@@ -1,9 +1,5 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Oh_gee_CD
 {
@@ -20,6 +16,7 @@ namespace Oh_gee_CD
             VerticalPadding = 5;
             MaxItemsHorizontal = 10;
             Scale = 1.0;
+            UI = null!;
         }
 
         [JsonProperty]

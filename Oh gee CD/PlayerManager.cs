@@ -1,6 +1,7 @@
 ﻿using Dalamud.Data;
 using Dalamud.Game;
 using Dalamud.Game.ClientState;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Hooking;
 using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
@@ -23,9 +24,16 @@ namespace Oh_gee_CD
         private readonly ClientState clientState;
         private readonly WindowSystem system;
         private readonly DrawHelper helper;
+        private readonly Dalamud.Game.ClientState.Conditions.Condition condition;
+
+        public bool CutsceneActive => condition[ConditionFlag.OccupiedInCutSceneEvent] || condition[ConditionFlag.WatchingCutscene78];
+        public bool InCombat => condition[ConditionFlag.InCombat];
+
 
         [JsonProperty]
         public SoundManager SoundManager { get; init; }
+        [JsonProperty]
+        public bool HideOutOfCombat { get; set; } = true;
         public List<Job> Jobs { get; set; } = new();
         public List<OGCDBar> OGCDBars { get; set; } = new();
         private string lastJob = string.Empty;
@@ -43,7 +51,8 @@ namespace Oh_gee_CD
             UseActionHook = null!;
         }
 
-        public PlayerManager(Framework framework, DataManager dataManager, ClientState clientState, SoundManager soundManager, WindowSystem system, DrawHelper helper)
+        public PlayerManager(Framework framework, DataManager dataManager, ClientState clientState, SoundManager soundManager, WindowSystem system, DrawHelper helper,
+            Dalamud.Game.ClientState.Conditions.Condition condition)
         {
             this.framework = framework;
             this.dataManager = dataManager;
@@ -51,12 +60,14 @@ namespace Oh_gee_CD
             this.SoundManager = soundManager;
             this.system = system;
             this.helper = helper;
+            this.condition = condition;
             UseActionHook = new Hook<UseActionDelegate>((IntPtr)ActionManager.fpUseAction, UseActionDetour);
         }
 
 
         private void Framework_Update(Framework framework)
         {
+            if (clientState.LocalPlayer?.ClassJob?.GameData == null) return;
             if (lastJob != clientState.LocalPlayer.ClassJob.GameData.Abbreviation)
             {
                 lastJob = clientState.LocalPlayer.ClassJob.GameData.Abbreviation;
@@ -186,10 +197,13 @@ namespace Oh_gee_CD
                 OGCDBars.Add(bar);
             }
 
+            HideOutOfCombat = configuration.LoadedPlayerManager.HideOutOfCombat;
+
             var ttsVolume = configuration.LoadedPlayerManager.SoundManager?.TTSVolume;
             PluginLog.Debug("TTS Volume: " + ttsVolume);
             SoundManager.TTSVolume = configuration.LoadedPlayerManager.SoundManager?.TTSVolume ?? 100;
             SoundManager.SelectedVoiceCulture = configuration.LoadedPlayerManager.SoundManager?.SelectedVoiceCulture ?? "en-US";
+            SoundManager.SetPlayerManager(this);
         }
 
         public void AddOGCDBar(OGCDBar bar)

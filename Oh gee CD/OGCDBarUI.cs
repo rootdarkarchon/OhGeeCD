@@ -1,6 +1,5 @@
 ﻿using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
 using ImGuiNET;
 using System;
 using System.Linq;
@@ -24,7 +23,6 @@ namespace Oh_gee_CD
             system.AddWindow(this);
             this.Toggle();
             Flags |= ImGuiWindowFlags.NoScrollbar;
-            //Flags |= ImGuiWindowFlags.AlwaysAutoResize;
             Flags |= ImGuiWindowFlags.NoTitleBar;
             Flags |= ImGuiWindowFlags.NoBackground;
             Flags |= ImGuiWindowFlags.NoDecoration;
@@ -39,7 +37,7 @@ namespace Oh_gee_CD
                 Flags &= ~ImGuiWindowFlags.NoMove;
                 Flags &= ~ImGuiWindowFlags.NoBackground;
                 Flags &= ~ImGuiWindowFlags.NoMouseInputs;
-                ImGui.PushStyleColor(ImGuiCol.WindowBg, Color(255, 0, 0, 255));
+                ImGui.PushStyleColor(ImGuiCol.WindowBg, DrawHelper.Color(255, 0, 0, 255));
             }
             else
             {
@@ -60,7 +58,8 @@ namespace Oh_gee_CD
 
         public override void Draw()
         {
-            if (!IsOpen) return;
+            if (!IsOpen || playerManager.CutsceneActive || (playerManager.HideOutOfCombat && !playerManager.InCombat && !bar.InEditMode)) return;
+
             var job = playerManager.Jobs.SingleOrDefault(j => j.IsActive);
             if (job == null) return;
 
@@ -111,8 +110,8 @@ namespace Oh_gee_CD
         {
             var drawList = ImGui.GetWindowDrawList();
             position = new Vector2(ImGui.GetWindowPos().X + position.X, ImGui.GetWindowPos().Y + position.Y);
-            ImGui.PushClipRect(position, new Vector2(position.X + size,
-                position.Y + size), false);
+            ImGui.PushClipRect(position, new Vector2(position.X + size * 2,
+                position.Y + size * 2), false);
 
             drawHelper.DrawIconClipRect(drawList, action.Icon, position, new Vector2(position.X + size, position.Y + size));
 
@@ -122,7 +121,7 @@ namespace Oh_gee_CD
                     new Vector2(position.X,
                         position.Y + (size * (1 - ((float)(action.CooldownTimer / action.Recast.TotalSeconds))))),
                     new Vector2(position.X + size, position.Y + size),
-                    Color(255, 255, 255, 200), 5, ImDrawFlags.RoundCornersAll);
+                    DrawHelper.Color(255, 255, 255, 200), 5, ImDrawFlags.RoundCornersAll);
             }
 
             if (action.MaxStacks > 1)
@@ -132,24 +131,21 @@ namespace Oh_gee_CD
                 ImGui.SetWindowFontScale(2.5f * size / 64.0f);
 
                 var textSize = ImGui.CalcTextSize(cooldownString);
-                uint fontColorText = Color(255, 0, 0, 255);
-                uint fontColorOutline = Color(255, 255, 255, 255);
-                Vector2 cornerPos = new Vector2(position.X + size - textSize.X, position.Y + size - (textSize.Y * 5 / 6));
+                uint fontColorText = DrawHelper.Color(255, 255, 255, 255);
+                uint fontColorOutline = DrawHelper.Color(255, 0, 0, 255);
+                Vector2 cornerPos = new Vector2(position.X + size - textSize.X * 0.8f, position.Y + size - (textSize.Y * 0.8f));
 
                 int fontOffset = 2;
-                drawList.AddText(new Vector2(cornerPos.X - fontOffset, cornerPos.Y - fontOffset),
-                    fontColorOutline, cooldownString);
                 drawList.AddText(new Vector2(cornerPos.X, cornerPos.Y - fontOffset),
                     fontColorOutline, cooldownString);
                 drawList.AddText(new Vector2(cornerPos.X - fontOffset, cornerPos.Y),
-                    fontColorOutline, cooldownString);
-                drawList.AddText(new Vector2(cornerPos.X + fontOffset, cornerPos.Y + fontOffset),
                     fontColorOutline, cooldownString);
                 drawList.AddText(new Vector2(cornerPos.X, cornerPos.Y + fontOffset),
                     fontColorOutline, cooldownString);
                 drawList.AddText(new Vector2(cornerPos.X + fontOffset, cornerPos.Y),
                     fontColorOutline, cooldownString);
 
+                drawList.AddText(cornerPos, fontColorText, cooldownString);
                 drawList.AddText(cornerPos, fontColorText, cooldownString);
                 ImGui.SetWindowFontScale(1);
             }
@@ -161,18 +157,14 @@ namespace Oh_gee_CD
                 ImGui.SetWindowFontScale(2 * size / 64.0f);
 
                 var textSize = ImGui.CalcTextSize(cooldownString);
-                uint fontColorText = Color(255, 255, 255, 255);
-                uint fontColorOutline = Color(0, 0, 0, 255);
+                uint fontColorText = DrawHelper.Color(255, 255, 255, 255);
+                uint fontColorOutline = DrawHelper.Color(0, 0, 0, 255);
                 Vector2 centerPos = new Vector2(position.X + size / 2 - textSize.X / 2, position.Y + size / 2 - textSize.Y / 2);
 
                 int fontOffset = 2;
-                drawList.AddText(new Vector2(centerPos.X - fontOffset, centerPos.Y - fontOffset),
-                    fontColorOutline, cooldownString);
                 drawList.AddText(new Vector2(centerPos.X, centerPos.Y - fontOffset),
                     fontColorOutline, cooldownString);
                 drawList.AddText(new Vector2(centerPos.X - fontOffset, centerPos.Y),
-                    fontColorOutline, cooldownString);
-                drawList.AddText(new Vector2(centerPos.X + fontOffset, centerPos.Y + fontOffset),
                     fontColorOutline, cooldownString);
                 drawList.AddText(new Vector2(centerPos.X, centerPos.Y + fontOffset),
                     fontColorOutline, cooldownString);
@@ -180,13 +172,13 @@ namespace Oh_gee_CD
                     fontColorOutline, cooldownString);
 
                 drawList.AddText(centerPos, fontColorText, cooldownString);
+                drawList.AddText(centerPos, fontColorText, cooldownString);
                 ImGui.SetWindowFontScale(1);
             }
 
             drawList.PopClipRect();
         }
 
-        public static uint Color(byte r, byte g, byte b, byte a) { uint ret = a; ret <<= 8; ret += b; ret <<= 8; ret += g; ret <<= 8; ret += r; return ret; }
 
         public void Dispose()
         {
