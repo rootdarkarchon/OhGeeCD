@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Oh_gee_CD
 {
@@ -93,20 +94,25 @@ namespace Oh_gee_CD
 
         [NonSerialized]
         public Hook<UseActionDelegate> UseActionHook;
+        private DateTime lastExecutedAction = DateTime.Now;
 
         public byte OnUseAction(ActionManager* actionManager, uint actionType, uint actionID, long targetObjectID, uint param, uint useType, int pvp, bool* isGroundTarget)
         {
             var ret = UseActionHook.Original(actionManager, actionType, actionID, targetObjectID, param, useType, pvp, isGroundTarget);
-            uint adjustedActionId = actionManager->GetAdjustedActionId(actionID);
-
             if (ret == 0) return ret;
+            if (DateTime.Now - lastExecutedAction < TimeSpan.FromSeconds(0.5)) return ret;
+            lastExecutedAction = DateTime.Now;
 
-
-            var action = Jobs.FirstOrDefault(j => j.IsActive)?.Actions.FirstOrDefault(a => a.Id == adjustedActionId);
-            if (action != null)
+            Task.Run(() =>
             {
-                action.StartCountdown(actionManager);
-            }
+                uint adjustedActionId = actionManager->GetAdjustedActionId(actionID);
+
+                var action = Jobs.FirstOrDefault(j => j.IsActive)?.Actions.FirstOrDefault(a => a.Id == adjustedActionId);
+                if (action != null)
+                {
+                    action.StartCountdown(actionManager);
+                }
+            });
 
             return ret;
         }
@@ -168,6 +174,11 @@ namespace Oh_gee_CD
 
             framework.Update += Framework_Update;
             UseActionHook.Enable();
+
+            foreach (var job in Jobs)
+            {
+                job.Debug();
+            }
         }
 
         private void SpawnBars()

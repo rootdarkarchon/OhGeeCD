@@ -93,10 +93,13 @@ namespace Oh_gee_CD
                     return;
                 }
 
+                PluginLog.Debug("First cast " + Name + "(" + CooldownGroup + ")");
+
                 soundQueue = 1;
                 timerRunning = true;
                 CooldownTimer = 0;
                 bool earlyCallOutReset = true;
+                Thread.Sleep(1000);
                 do
                 {
                     Thread.Sleep(100);
@@ -109,8 +112,8 @@ namespace Oh_gee_CD
 
                     var stacks = (short)Math.Floor(detail->Elapsed / Recast.TotalSeconds);
 
-                    if (IsCurrentClassJob 
-                        && ((soundQueue > 1 && stacks > CurrentStacks && EarlyCallout == 0.0) 
+                    if (IsCurrentClassJob
+                        && ((soundQueue > 1 && stacks > CurrentStacks && EarlyCallout == 0.0)
                            || (CooldownTimer <= EarlyCallout && soundQueue >= 1 && earlyCallOutReset)))
                     {
                         PlaySound();
@@ -162,6 +165,7 @@ namespace Oh_gee_CD
             IsCurrentClassJob = true;
             this.currentJobLevel = currentJobLevel;
             MaxStacks = (short)ActionManager.GetMaxCharges(Id, currentJobLevel);
+            CurrentStacks = MaxStacks;
         }
 
         public void UpdateValuesFromOtherAction(OGCDAction fittingActionFromConfig)

@@ -47,10 +47,13 @@ namespace Oh_gee_CD
             SignatureHelper.Initialise(this);
         }
 
-        public void SetVoice(string cultureInfo)
+        public void SetVoice(string cultureInfo, SpeechSynthesizer synthesizer = null)
         {
             SelectedVoiceCulture = cultureInfo;
-            speechSynthesizer.SelectVoiceByHints(VoiceGender.NotSet, VoiceAge.NotSet, 0, new System.Globalization.CultureInfo(cultureInfo));
+            if (synthesizer == null)
+                speechSynthesizer.SelectVoiceByHints(VoiceGender.NotSet, VoiceAge.NotSet, 0, new System.Globalization.CultureInfo(cultureInfo));
+            else
+                synthesizer.SelectVoiceByHints(VoiceGender.NotSet, VoiceAge.NotSet, 0, new System.Globalization.CultureInfo(cultureInfo));
         }
 
         public void PlaySoundEffect(int soundEffect)
@@ -77,21 +80,26 @@ namespace Oh_gee_CD
         {
             if (playerManager.CutsceneActive || (!playerManager.InCombat && playerManager.HideOutOfCombat)) return;
 
-            if (e.SoundId > 0)
+            Task.Run(() =>
             {
-                PlaySoundEffect(e.SoundId);
-            }
 
-            if (!string.IsNullOrEmpty(e.TextToSpeech))
-            {
-                speechSynthesizer.SpeakAsync(e.TextToSpeech);
-            }
-
-            if (!string.IsNullOrEmpty(e.SoundPath))
-            {
-                if (!File.Exists(e.SoundPath)) return;
-                Task.Run(() =>
+                if (e.SoundId > 0)
                 {
+                    PlaySoundEffect(e.SoundId);
+                }
+
+                if (!string.IsNullOrEmpty(e.TextToSpeech))
+                {
+                    var synth = new SpeechSynthesizer();
+                    synth.SetOutputToDefaultAudioDevice();
+                    SetVoice(SelectedVoiceCulture, synth);
+                    synth.Speak(e.TextToSpeech);
+                }
+
+                if (!string.IsNullOrEmpty(e.SoundPath))
+                {
+                    if (!File.Exists(e.SoundPath)) return;
+
                     using (var mf = new MediaFoundationReader(e.SoundPath))
                     using (var wo = new WaveOutEvent())
                     {
@@ -102,8 +110,9 @@ namespace Oh_gee_CD
                             Thread.Sleep(200);
                         }
                     }
-                });
-            }
+                }
+            });
+
         }
 
         public void Dispose()
