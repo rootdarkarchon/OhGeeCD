@@ -79,6 +79,7 @@ namespace Oh_gee_CD
         }
 
         private bool timerRunning = false;
+        private bool soundPlayed = false;
 
         public unsafe void StartCountdown(ActionManager* actionManager)
         {
@@ -87,16 +88,14 @@ namespace Oh_gee_CD
                 var detail = actionManager->GetRecastGroupDetail(CooldownGroup);
                 if (detail->IsActive == 1 && timerRunning)
                 {
+                    soundPlayed = false;
                     PluginLog.Debug("Recast timer is active for " + Name);
-                    CurrentStacks--;
                     return;
                 }
 
                 CurrentStacks--;
                 timerRunning = true;
-                bool soundPlayed = false;
-                var prevCoolDown = CooldownTimer;
-                while (detail->IsActive == 1 && !cts.IsCancellationRequested)
+                do
                 {
                     Thread.Sleep(100);
                     detail = actionManager->GetRecastGroupDetail(CooldownGroup);
@@ -105,7 +104,9 @@ namespace Oh_gee_CD
 
                     CooldownTimer = ((Recast.TotalSeconds * MaxStacks - curTimeElapsed) % Recast.TotalSeconds);
 
-                    if (IsCurrentClassJob && CooldownTimer <= EarlyCallout && !soundPlayed)
+                    var stacks = (short)Math.Floor(detail->Elapsed / Recast.TotalSeconds);
+
+                    if (IsCurrentClassJob && CooldownTimer <= EarlyCallout && !soundPlayed || stacks > CurrentStacks)
                     {
                         soundPlayed = true;
                         SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
@@ -113,11 +114,12 @@ namespace Oh_gee_CD
                             SoundEffectEnabled ? SoundPath : null));
                     }
 
-                    PluginLog.Debug("Looping recast timer active " + Name + ", " + CooldownTimer + ";" + curTimeElapsed);
-                    prevCoolDown = CooldownTimer;
-                }
+                    CurrentStacks = stacks;
 
-                if (IsCurrentClassJob && !soundPlayed)
+                } while (detail->IsActive == 1 && !cts.IsCancellationRequested && CurrentStacks != MaxStacks);
+
+                CurrentStacks = MaxStacks;
+                if (IsCurrentClassJob && EarlyCallout == 0)
                 {
                     soundPlayed = true;
                     SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
@@ -126,64 +128,8 @@ namespace Oh_gee_CD
                 }
 
                 CooldownTimer = 0;
-                CurrentStacks++;
                 timerRunning = false;
             }, cts.Token);
-            /*
-            TimeSpan recastTimer = Recast;
-            if (CurrentStacks == 0) return;
-            PluginLog.Debug($"Casted {Name}");
-
-            if (MaxStacks > 1 && CurrentStacks != MaxStacks)
-            {
-                ReduceStacks();
-            }
-            else
-            {
-                Task countdown = new(() =>
-                {
-                    try
-                    {
-                        ReduceStacks();
-                        do
-                        {
-                            CooldownTimer = (int)Recast.TotalSeconds;
-                            PluginLog.Debug($"Looping for {Name}: {CurrentStacks}/{MaxStacks}, from now: +{recastTimer.TotalSeconds}s");
-                            var waitingTime = (int)(recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds);
-                            while (waitingTime > 0)
-                            {
-                                Thread.Sleep(100);
-                                CooldownTimer -= 0.1;
-                                waitingTime -= 100;
-                            }
-                            //await Task.Delay((int)(recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds), cts.Token);
-                            if (IsCurrentClassJob)
-                            {
-                                SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
-                                    SoundEffectEnabled ? SoundEffect : null,
-                                    SoundEffectEnabled ? SoundPath : null));
-                            }
-                            var remainingWaitingTime = (int)(recastTimer.TotalMilliseconds - (recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds));
-                            while (remainingWaitingTime > 0)
-                            {
-                                Thread.Sleep(100);
-                                CooldownTimer -= 0.1;
-                                remainingWaitingTime -= 100;
-                            }
-                            //await Task.Delay((int)(recastTimer.TotalMilliseconds - (recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds)), cts.Token);
-                            PluginLog.Debug($"{Name} available again!");
-                            CurrentStacks++;
-
-                        } while (CurrentStacks != MaxStacks && !cts.IsCancellationRequested);
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        PluginLog.Debug($"Task for {Name} cancelled");
-                    }
-                }, cts.Token);
-
-                countdown.Start();
-            }*/
         }
 
         private void ReduceStacks()
