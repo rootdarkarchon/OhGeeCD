@@ -144,6 +144,7 @@ namespace Oh_gee_CD
         public void UpdateValuesFromOtherAction(OGCDAction fittingActionFromConfig)
         {
             OGCDBarId = fittingActionFromConfig.OGCDBarId;
+            DrawOnOGCDBar = fittingActionFromConfig.DrawOnOGCDBar;
             SoundEffect = fittingActionFromConfig.SoundEffect;
             SoundEffectEnabled = fittingActionFromConfig.SoundEffectEnabled;
             TextToSpeechName = fittingActionFromConfig.TextToSpeechName;

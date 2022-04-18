@@ -171,6 +171,7 @@ namespace Oh_gee_CD
             var ttsVolume = configuration.LoadedPlayerManager.SoundManager?.TTSVolume;
             PluginLog.Debug("TTS Volume: " + ttsVolume);
             SoundManager.TTSVolume = configuration.LoadedPlayerManager.SoundManager?.TTSVolume ?? 100;
+            SoundManager.SelectedVoiceCulture = configuration.LoadedPlayerManager.SoundManager?.SelectedVoiceCulture ?? "en-US";
         }
 
         public void Dispose()

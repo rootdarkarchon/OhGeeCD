@@ -25,7 +25,6 @@ namespace Oh_gee_CD
         public ChatGui ChatHandlers { get; }
         public DataManager DataManager { get; }
         private OhGeeCDConfiguration Configuration { get; init; }
-        private PluginUI PluginUi { get; init; }
 
         private PlayerManager playerManager;
         private SoundManager soundManager;
@@ -53,7 +52,6 @@ namespace Oh_gee_CD
 
             commandManager.AddHandler(commandName, new CommandInfo(OnCommand));
 
-            PluginUi = new PluginUI(Configuration);
 
             if (!clientState.IsLoggedIn)
             {
@@ -83,7 +81,7 @@ namespace Oh_gee_CD
 
             CommandManager.RemoveHandler(commandName);
             playerManager.Dispose();
-            PluginUi.Dispose();
+            ui.Dispose();
         }
 
         private void OnCommand(string command, string args)

@@ -33,9 +33,11 @@ namespace Oh_gee_CD
             this.manager = manager;
             this.system = system;
             this.dataManager = dataManager;
+            if (manager.OGCDBars.Count > 0) selectedOGCDIndex = 0;
         }
 
         public int selectedJobIndex = 0;
+        public int selectedOGCDIndex = -1;
 
         public event EventHandler<SoundEventArgs>? SoundEvent;
 
@@ -43,6 +45,118 @@ namespace Oh_gee_CD
         {
             if (!IsOpen) return;
 
+            ImGui.BeginTabBar("MainTabBar");
+            if (ImGui.BeginTabItem("General"))
+            {
+                DrawGeneralSettings();
+                ImGui.EndTabItem();
+            }
+            if (ImGui.BeginTabItem("Abilities"))
+            {
+                DrawJobs();
+                ImGui.EndTabItem();
+            }
+            if (ImGui.BeginTabItem("OGCD Bars"))
+            {
+                DrawOGCDBars();
+                ImGui.EndTabItem();
+            }
+            ImGui.EndTabBar();
+
+        }
+
+        private void DrawOGCDBars()
+        {
+            ImGui.BeginListBox("##OGCDBars", new Vector2(200, ImGui.GetContentRegionAvail().Y));
+            int index = 0;
+
+            if (ImGui.Button("+"))
+            {
+                var barId = manager.OGCDBars.OrderBy(b => b.Id).LastOrDefault()?.Id ?? 1;
+                manager.OGCDBars.Add(new OGCDBar(barId, "New OGCD Bar #" + barId));
+            }
+
+            ImGui.SameLine();
+
+            if (ImGui.Button("-"))
+            {
+                if (selectedOGCDIndex < 0) return; 
+                var removedOGCDBarId = manager.OGCDBars[selectedOGCDIndex].Id;
+                manager.OGCDBars.Remove(manager.OGCDBars[selectedOGCDIndex]);
+                foreach (var job in manager.Jobs.SelectMany(j => j.Actions))
+                {
+                    if (job.OGCDBarId == removedOGCDBarId) job.OGCDBarId = 0;
+                }
+                if (manager.OGCDBars.Count == 0) selectedOGCDIndex = -1;
+            }
+
+
+            foreach (var ogcdBar in manager.OGCDBars)
+            {
+                bool isSelected = (index == selectedJobIndex);
+                if (ImGui.Selectable(ogcdBar.Name, isSelected))
+                {
+                    selectedOGCDIndex = index;
+                }
+
+                if (isSelected)
+                {
+                    ImGui.SetItemDefaultFocus();
+                }
+
+                index++;
+            }
+            ImGui.EndListBox();
+
+            ImGui.SameLine();
+
+            ImGui.BeginChild("content", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y));
+            if (selectedOGCDIndex >= 0)
+                DrawOGCDBar(manager.OGCDBars[selectedOGCDIndex]);
+            ImGui.EndChild();
+        }
+
+        private void DrawOGCDBar(OGCDBar bar)
+        {
+            string name = bar.Name;
+            if (ImGui.InputText("Name", ref name, 100))
+            {
+                if (string.IsNullOrEmpty(name))
+                {
+                    name = "#" + bar.Id.ToString();
+                }
+                bar.Name = name;
+            }
+        }
+
+        private void DrawGeneralSettings()
+        {
+            int textToSpeechVolume = manager.SoundManager.TTSVolume;
+            if (ImGui.SliderInt("TTS Volume##", ref textToSpeechVolume, 0, 100))
+            {
+                manager.SoundManager.TTSVolume = textToSpeechVolume;
+            }
+
+            if (ImGui.BeginCombo("Voice Culture", manager.SoundManager.SelectedVoiceCulture))
+            {
+                foreach (var voiceCulture in manager.SoundManager.AvailableVoices.Select(f => f.VoiceInfo.Culture.Name).Distinct().OrderBy(f => f))
+                {
+                    if (ImGui.Selectable(voiceCulture, voiceCulture == manager.SoundManager.SelectedVoiceCulture))
+                    {
+                        manager.SoundManager.SetVoice(voiceCulture);
+                    }
+
+                    if (voiceCulture == manager.SoundManager.SelectedVoiceCulture)
+                    {
+                        ImGui.SetItemDefaultFocus();
+                    }
+                }
+                ImGui.EndCombo();
+            }
+        }
+
+        private void DrawJobs()
+        {
             ImGui.BeginListBox("##Jobs", new Vector2(100, ImGui.GetContentRegionAvail().Y));
             int index = 0;
 
@@ -71,7 +185,6 @@ namespace Oh_gee_CD
                 DrawOGCDAction(manager.Jobs[selectedJobIndex], action);
             }
             ImGui.EndChild();
-
         }
 
         public void DrawOGCDAction(Job job, OGCDAction action)
@@ -110,7 +223,7 @@ namespace Oh_gee_CD
                 action.DrawOnOGCDBar = onGCDBar;
             }
 
-            ImGui.Indent();
+            ImGui.Indent(32);
 
 
             if (action.TextToSpeechEnabled)
@@ -196,12 +309,12 @@ namespace Oh_gee_CD
                 }
 
                 ImGui.SameLine();
-                if(ImGui.Button("Open File##" + action.Name))
+                if (ImGui.Button("Open File##" + action.Name))
                 {
                     var fileDialog = new OpenFileDialog();
                     fileDialog.Filter = "MP3 Files|*.mp3|OGG Files|*.ogg|WAV Files|*.wav";
-                    
-                    if(fileDialog.ShowDialog() == DialogResult.OK)
+
+                    if (fileDialog.ShowDialog() == DialogResult.OK)
                     {
                         action.SoundPath = fileDialog.FileName;
                     }
@@ -257,7 +370,7 @@ namespace Oh_gee_CD
                 }
             }
 
-            ImGui.Unindent();
+            ImGui.Unindent(32);
 
             ImGui.Separator();
         }
@@ -294,7 +407,7 @@ namespace Oh_gee_CD
             }
         }
 
-        void IDisposable.Dispose()
+        public void Dispose()
         {
             system.RemoveWindow(this);
         }

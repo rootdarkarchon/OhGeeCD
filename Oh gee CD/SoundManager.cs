@@ -1,8 +1,8 @@
-﻿using Dalamud.Logging;
-using Dalamud.Utility.Signatures;
+﻿using Dalamud.Utility.Signatures;
 using NAudio.Wave;
 using Newtonsoft.Json;
 using System;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Speech.Synthesis;
 using System.Threading;
@@ -29,13 +29,28 @@ namespace Oh_gee_CD
                     speechSynthesizer.Volume = ttsVolume;
             }
         }
+
+        [JsonProperty]
+        public string SelectedVoiceCulture { get; set; } = "en-US";
+
+        [JsonIgnore]
+        public ReadOnlyCollection<InstalledVoice> AvailableVoices { get; }
+
         private int ttsVolume = 100;
 
         public SoundManager()
         {
             speechSynthesizer = new SpeechSynthesizer();
             speechSynthesizer.SetOutputToDefaultAudioDevice();
+            AvailableVoices = speechSynthesizer.GetInstalledVoices();
+            SetVoice(SelectedVoiceCulture);
             SignatureHelper.Initialise(this);
+        }
+
+        public void SetVoice(string cultureInfo)
+        {
+            SelectedVoiceCulture = cultureInfo;
+            speechSynthesizer.SelectVoiceByHints(VoiceGender.NotSet, VoiceAge.NotSet, 0, new System.Globalization.CultureInfo(cultureInfo));
         }
 
         public void PlaySoundEffect(int soundEffect)
