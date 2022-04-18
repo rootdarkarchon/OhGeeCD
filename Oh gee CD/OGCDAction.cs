@@ -81,21 +81,22 @@ namespace Oh_gee_CD
         private bool timerRunning = false;
         private int soundQueue = 1;
 
-        public unsafe void StartCountdown(ActionManager* actionManager)
+        public unsafe void StartCountdown(ActionManager* actionManager, bool playSound = true)
         {
             Task.Run(() =>
             {
                 var detail = actionManager->GetRecastGroupDetail(CooldownGroup);
                 if (detail->IsActive == 1 && timerRunning)
                 {
-                    soundQueue++;
+                    if(playSound)
+                        soundQueue++;
                     PluginLog.Debug("Recast timer is active for " + Name);
                     return;
                 }
 
                 PluginLog.Debug("First cast " + Name + "(" + CooldownGroup + ")");
 
-                soundQueue = 1;
+                soundQueue = playSound ? 1 : 0;
                 timerRunning = true;
                 CooldownTimer = 0;
                 bool earlyCallOutReset = true;

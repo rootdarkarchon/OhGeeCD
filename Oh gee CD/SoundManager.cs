@@ -20,23 +20,13 @@ namespace Oh_gee_CD
         private PlayerManager playerManager;
         private SpeechSynthesizer speechSynthesizer;
         [JsonProperty]
-        public int TTSVolume
-        {
-            get => ttsVolume; set
-            {
-                ttsVolume = value;
-                if (speechSynthesizer != null)
-                    speechSynthesizer.Volume = ttsVolume;
-            }
-        }
+        public int TTSVolume { get; set; } = 100;
 
         [JsonProperty]
         public string SelectedVoiceCulture { get; set; } = "en-US";
 
         [JsonIgnore]
         public ReadOnlyCollection<InstalledVoice> AvailableVoices { get; }
-
-        private int ttsVolume = 100;
 
         public SoundManager()
         {
@@ -78,11 +68,10 @@ namespace Oh_gee_CD
 
         private void SoundEventTriggered(object? sender, SoundEventArgs e)
         {
-            if (playerManager.CutsceneActive || (!playerManager.InCombat && playerManager.HideOutOfCombat)) return;
+            if (playerManager.CutsceneActive || (!playerManager.InCombat && playerManager.HideOutOfCombat && !e.ForceSound)) return;
 
             Task.Run(() =>
             {
-
                 if (e.SoundId > 0)
                 {
                     PlaySoundEffect(e.SoundId);
@@ -93,6 +82,7 @@ namespace Oh_gee_CD
                     var synth = new SpeechSynthesizer();
                     synth.SetOutputToDefaultAudioDevice();
                     SetVoice(SelectedVoiceCulture, synth);
+                    synth.Volume = TTSVolume;
                     synth.Speak(e.TextToSpeech);
                 }
 

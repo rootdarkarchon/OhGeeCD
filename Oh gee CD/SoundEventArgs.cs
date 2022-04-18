@@ -5,7 +5,7 @@
         public int SoundId { get; init; }
         public string TextToSpeech { get; init; }
         public string SoundPath { get; init; }
-
+        public bool ForceSound { get; set; } = false;
 
         public SoundEventArgs(string? textToSpeech, int? soundId, string? soundPath)
         {

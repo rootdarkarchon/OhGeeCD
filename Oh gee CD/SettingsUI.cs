@@ -322,7 +322,7 @@ namespace Oh_gee_CD
 
                 if (ImGui.Button("Test TTS##" + action.Name))
                 {
-                    SoundEvent?.Invoke(null, new SoundEventArgs(action.TextToSpeechName, null, null));
+                    SoundEvent?.Invoke(null, new SoundEventArgs(action.TextToSpeechName, null, null) { ForceSound = true });
                 }
             }
 
@@ -347,7 +347,7 @@ namespace Oh_gee_CD
                         if (ImGui.Selectable(i.ToString(), action.SoundEffect == i))
                         {
                             action.SoundEffect = i;
-                            SoundEvent?.Invoke(null, new SoundEventArgs(null, action.SoundEffect, null));
+                            SoundEvent?.Invoke(null, new SoundEventArgs(null, action.SoundEffect, null) { ForceSound = true });
                         }
 
                         if (i == action.SoundEffect)
@@ -363,7 +363,7 @@ namespace Oh_gee_CD
                 {
                     action.SoundEffect = action.SoundEffect + 1;
                     if (action.SoundEffect > 80) action.SoundEffect = 80;
-                    SoundEvent?.Invoke(null, new SoundEventArgs(null, action.SoundEffect, null));
+                    SoundEvent?.Invoke(null, new SoundEventArgs(null, action.SoundEffect, null) { ForceSound = true });
                 }
 
                 ImGui.SameLine();
@@ -371,7 +371,7 @@ namespace Oh_gee_CD
                 {
                     action.SoundEffect = action.SoundEffect - 1;
                     if (action.SoundEffect < 0) action.SoundEffect = 0;
-                    SoundEvent?.Invoke(null, new SoundEventArgs(null, action.SoundEffect, null));
+                    SoundEvent?.Invoke(null, new SoundEventArgs(null, action.SoundEffect, null) { ForceSound = true });
                 }
 
                 int soundId = action.SoundEffect;
@@ -380,7 +380,7 @@ namespace Oh_gee_CD
 
                 if (ImGui.Button("Test Sound##" + action.Name))
                 {
-                    SoundEvent?.Invoke(null, new SoundEventArgs(null, soundId, null));
+                    SoundEvent?.Invoke(null, new SoundEventArgs(null, soundId, null) { ForceSound = true });
                 }
 
                 ImGui.Text("Custom sound");
@@ -408,7 +408,7 @@ namespace Oh_gee_CD
                 ImGui.SameLine();
                 if (ImGui.Button("Test Sound##Custom" + action.Name))
                 {
-                    SoundEvent?.Invoke(null, new SoundEventArgs(null, null, action.SoundPath));
+                    SoundEvent?.Invoke(null, new SoundEventArgs(null, null, action.SoundPath) { ForceSound = true });
                 }
             }
 

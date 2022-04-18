@@ -1,13 +1,36 @@
 {
+  "Disabled": false,
+  "Testing": false,
+  "InstalledFromUrl": null,
+  "IsThirdParty": false,
   "Author": "darkarchon",
   "Name": "Oh gee, CD",
   "Punchline": "oGCD helper",
-  "Description": "A description that shows up in /xlplugins. List any major slash-command(s).",
-  "InternalName": "ohgeecd",
-  "ApplicableVersion": "any",
+  "Description": "OGCD assistant providing Text To Speech, (Custom) Sound Effects and unlimited extra bars to visualize and alert you for your OGCDs.",
+  "Changelog": null,
   "Tags": [
-    "sample",
+    "ogcd",
     "plugin",
-    "goats"
-  ]
+    "ui"
+  ],
+  "CategoryTags": null,
+  "IsHide": false,
+  "InternalName": "ohgeecd",
+  "AssemblyVersion": null,
+  "TestingAssemblyVersion": null,
+  "IsTestingExclusive": false,
+  "RepoUrl": "https://github.com/rootdarkarchon/OhGeeCD",
+  "ApplicableVersion": "any",
+  "DalamudApiLevel": 6,
+  "DownloadCount": 0,
+  "LastUpdate": 0,
+  "DownloadLinkInstall": null,
+  "DownloadLinkUpdate": null,
+  "DownloadLinkTesting": null,
+  "LoadPriority": 0,
+  "ImageUrls": null,
+  "IconUrl": "https://darkarchon.internet-box.ch:8443/stuff/ohgeecd.png",
+  "AcceptsFeedback": true,
+  "FeedbackMessage": null,
+  "FeedbackWebhook": null
 }

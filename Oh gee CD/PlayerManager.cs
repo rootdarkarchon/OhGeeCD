@@ -111,6 +111,10 @@ namespace Oh_gee_CD
                 if (action != null)
                 {
                     action.StartCountdown(actionManager);
+                    foreach(var associatedAction in Jobs.FirstOrDefault(j => j.IsActive)?.Actions?.Where(a => a.CooldownGroup == action.CooldownGroup && a.Id != action.Id))
+                    {
+                        associatedAction.StartCountdown(actionManager, false);
+                    }
                 }
             });
 
