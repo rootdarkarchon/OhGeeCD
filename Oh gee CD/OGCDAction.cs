@@ -79,7 +79,7 @@ namespace Oh_gee_CD
         }
 
         private bool timerRunning = false;
-        private bool soundPlayed = false;
+        private int soundQueue = 1;
 
         public unsafe void StartCountdown(ActionManager* actionManager)
         {
@@ -88,13 +88,15 @@ namespace Oh_gee_CD
                 var detail = actionManager->GetRecastGroupDetail(CooldownGroup);
                 if (detail->IsActive == 1 && timerRunning)
                 {
-                    soundPlayed = false;
+                    soundQueue++;
                     PluginLog.Debug("Recast timer is active for " + Name);
                     return;
                 }
 
-                CurrentStacks--;
+                soundQueue = 1;
                 timerRunning = true;
+                CooldownTimer = 0;
+                bool earlyCallOutReset = true;
                 do
                 {
                     Thread.Sleep(100);
@@ -102,16 +104,18 @@ namespace Oh_gee_CD
 
                     var curTimeElapsed = detail->Elapsed;
 
+                    earlyCallOutReset = earlyCallOutReset || CooldownTimer < ((Recast.TotalSeconds * MaxStacks - curTimeElapsed) % Recast.TotalSeconds);
                     CooldownTimer = ((Recast.TotalSeconds * MaxStacks - curTimeElapsed) % Recast.TotalSeconds);
 
                     var stacks = (short)Math.Floor(detail->Elapsed / Recast.TotalSeconds);
 
-                    if (IsCurrentClassJob && CooldownTimer <= EarlyCallout && !soundPlayed || stacks > CurrentStacks)
+                    if (IsCurrentClassJob 
+                        && ((soundQueue > 1 && stacks > CurrentStacks && EarlyCallout == 0.0) 
+                           || (CooldownTimer <= EarlyCallout && soundQueue >= 1 && earlyCallOutReset)))
                     {
-                        soundPlayed = true;
-                        SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
-                            SoundEffectEnabled ? SoundEffect : null,
-                            SoundEffectEnabled ? SoundPath : null));
+                        PlaySound();
+                        if (CooldownTimer <= EarlyCallout && soundQueue >= 1 && earlyCallOutReset) earlyCallOutReset = false;
+                        if (soundQueue > 0) soundQueue--;
                     }
 
                     CurrentStacks = stacks;
@@ -119,17 +123,21 @@ namespace Oh_gee_CD
                 } while (detail->IsActive == 1 && !cts.IsCancellationRequested && CurrentStacks != MaxStacks);
 
                 CurrentStacks = MaxStacks;
-                if (IsCurrentClassJob && EarlyCallout == 0)
+                if (IsCurrentClassJob && soundQueue == 1)
                 {
-                    soundPlayed = true;
-                    SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
-                        SoundEffectEnabled ? SoundEffect : null,
-                        SoundEffectEnabled ? SoundPath : null));
+                    PlaySound();
                 }
 
                 CooldownTimer = 0;
                 timerRunning = false;
             }, cts.Token);
+        }
+
+        private unsafe void PlaySound()
+        {
+            SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
+                SoundEffectEnabled ? SoundEffect : null,
+                SoundEffectEnabled ? SoundPath : null));
         }
 
         private void ReduceStacks()

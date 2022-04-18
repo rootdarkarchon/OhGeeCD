@@ -131,9 +131,9 @@ namespace Oh_gee_CD
                 ImGui.SetWindowFontScale(2.5f * size / 64.0f);
 
                 var textSize = ImGui.CalcTextSize(cooldownString);
-                uint fontColorText = DrawHelper.Color(255, 255, 255, 255);
-                uint fontColorOutline = DrawHelper.Color(255, 0, 0, 255);
-                Vector2 cornerPos = new Vector2(position.X + size - textSize.X * 0.8f, position.Y + size - (textSize.Y * 0.8f));
+                uint fontColorText = action.CurrentStacks > 0 ? DrawHelper.Color(255, 255, 255, 255) : DrawHelper.Color(255, 0, 0, 255);
+                uint fontColorOutline = action.CurrentStacks > 0 ? DrawHelper.Color(255, 0, 0, 255) : DrawHelper.Color(0, 0, 0, 255);
+                Vector2 cornerPos = new Vector2(position.X + size - textSize.X * 0.8f, position.Y + size - (textSize.Y * 0.7f));
 
                 int fontOffset = 2;
                 drawList.AddText(new Vector2(cornerPos.X, cornerPos.Y - fontOffset),
