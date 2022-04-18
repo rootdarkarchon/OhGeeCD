@@ -19,7 +19,6 @@ namespace Oh_gee_CD
             HorizontalPadding = 5;
             VerticalPadding = 5;
             MaxItemsHorizontal = 10;
-            MaxItemsVertical = 10;
             Scale = 1.0;
         }
 
@@ -37,8 +36,6 @@ namespace Oh_gee_CD
         public int VerticalPadding { get; set; }
         [JsonProperty]
         public int MaxItemsHorizontal { get; set; }
-        [JsonProperty]
-        public int MaxItemsVertical { get; set; }
         [JsonProperty]
         public double Scale { get; set; } = 1.0;
         [JsonIgnore]

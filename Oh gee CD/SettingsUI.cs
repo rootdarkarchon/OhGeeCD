@@ -1,11 +1,8 @@
 ﻿using Dalamud.Data;
-using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using ImGuiNET;
-using ImGuiScene;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
@@ -15,44 +12,6 @@ using System.Windows.Forms;
 
 namespace Oh_gee_CD
 {
-    public class OGCDBarUI : Window
-    {
-        private readonly OGCDBar bar;
-        private readonly WindowSystem system;
-        private readonly PlayerManager playerManager;
-        private readonly DrawHelper drawHelper;
-
-        public OGCDBarUI(OGCDBar bar, WindowSystem system, PlayerManager playerManager, DrawHelper drawHelper) : base("OGCDBarTest2" + bar.Name + bar.Id, ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoTitleBar)
-        {
-            this.bar = bar;
-            this.system = system;
-            this.playerManager = playerManager;
-            this.drawHelper = drawHelper;
-            system.AddWindow(this);
-            this.Toggle();
-        }
-
-        public override void Draw()
-        {
-            if (!IsOpen) return;
-            var job = playerManager.Jobs.SingleOrDefault(j => j.IsActive);
-            if (job == null) return;
-            var jobActions = job.Actions.Where(j => j.OGCDBarId == bar.Id).ToArray();
-            int i = 0;
-            foreach (var action in jobActions)
-            {
-                ImGui.SetCursorPos(ImGuiHelpers.ScaledVector2(64 * i, 4));
-                drawHelper.DrawIcon(action.Icon, new Vector2(64, 64));
-                i++;
-            }
-            ImGui.SetWindowSize(ImGuiHelpers.ScaledVector2(64 * jobActions.Length, 64));
-        }
-
-        public void Dispose()
-        {
-            system.RemoveWindow(this);
-        }
-    }
 
     internal class SettingsUI : Window, IDisposable, ISoundSource
     {
@@ -113,7 +72,7 @@ namespace Oh_gee_CD
 
             if (ImGui.Button("+"))
             {
-                var barId = manager.OGCDBars.OrderBy(b => b.Id).LastOrDefault()?.Id ?? 1;
+                var barId = manager.OGCDBars.OrderBy(b => b.Id).LastOrDefault()?.Id + 1 ?? 1;
                 manager.AddOGCDBar(new OGCDBar(barId, "New OGCD Bar #" + barId));
             }
 
@@ -134,13 +93,13 @@ namespace Oh_gee_CD
 
             foreach (var ogcdBar in manager.OGCDBars)
             {
-                bool isSelected = (index == selectedJobIndex);
-                if (ImGui.Selectable(ogcdBar.Name, isSelected))
+                bool isSelected = (index == selectedOGCDIndex);
+                if (ImGui.Selectable(ogcdBar.Name + "##" + ogcdBar.Id, isSelected))
                 {
                     selectedOGCDIndex = index;
                 }
 
-                if (isSelected)
+                if (index == selectedJobIndex)
                 {
                     ImGui.SetItemDefaultFocus();
                 }
@@ -188,15 +147,9 @@ namespace Oh_gee_CD
             }
 
             int maxItemsHorizontal = bar.MaxItemsHorizontal;
-            if (ImGui.SliderInt("Max horizontal items", ref maxItemsHorizontal, 0, 10))
+            if (ImGui.SliderInt("Max horizontal items", ref maxItemsHorizontal, 1, 10))
             {
                 bar.MaxItemsHorizontal = maxItemsHorizontal;
-            }
-
-            int maxItemsVertical = bar.MaxItemsVertical;
-            if (ImGui.SliderInt("Max vertical items", ref maxItemsVertical, 0, 10))
-            {
-                bar.MaxItemsVertical = maxItemsVertical;
             }
 
             double scale = bar.Scale;
@@ -511,53 +464,5 @@ namespace Oh_gee_CD
         {
             system.RemoveWindow(this);
         }
-    }
-
-    public class DrawHelper
-    {
-
-        public readonly Dictionary<uint, TextureWrap> textures = new();
-        private readonly DataManager dataManager;
-
-        public DrawHelper(DataManager dataManager)
-        {
-            this.dataManager = dataManager;
-        }
-
-        public void DrawIcon(uint icon, Vector2 size, bool sameLine = true)
-        {
-            TextureWrap? hqicon;
-            if (textures.ContainsKey(icon))
-            {
-                hqicon = textures[icon];
-            }
-            else
-            {
-                hqicon = dataManager.GetImGuiTextureHqIcon(icon);
-                if (hqicon == null) return;
-                textures.Add(icon, hqicon);
-            }
-
-            ImGui.Image(hqicon.ImGuiHandle, size);
-            if (sameLine)
-            {
-                ImGui.SameLine();
-            }
-        }
-
-        public static void DrawHelpText(string helpText)
-        {
-            ImGui.SameLine();
-            ImGui.TextDisabled("(?)");
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.PushTextWrapPos(ImGui.GetFontSize() * 35.0f);
-                ImGui.TextUnformatted(helpText);
-                ImGui.PopTextWrapPos();
-                ImGui.EndTooltip();
-            }
-        }
-
     }
 }

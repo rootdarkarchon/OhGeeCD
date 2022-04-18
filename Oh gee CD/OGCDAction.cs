@@ -38,7 +38,8 @@ namespace Oh_gee_CD
         public byte CooldownGroup { get; }
         [JsonIgnore]
         public short MaxStacks { get; private set; }
-        private short currentStacks;
+        [JsonIgnore]
+        public short CurrentStacks { get; private set; }
         readonly CancellationTokenSource cts;
         [JsonIgnore]
         public byte RequiredJobLevel { get; private init; }
@@ -63,7 +64,7 @@ namespace Oh_gee_CD
             RequiredJobLevel = requiredLevel;
             this.currentJobLevel = currentJobLevel;
             MaxStacks = (short)ActionManager.GetMaxCharges(Id, currentJobLevel);
-            currentStacks = MaxStacks;
+            CurrentStacks = MaxStacks;
             cts = new CancellationTokenSource();
         }
 
@@ -80,9 +81,10 @@ namespace Oh_gee_CD
         public void StartCountdown()
         {
             TimeSpan recastTimer = Recast;
+            if (CurrentStacks == 0) return;
             PluginLog.Debug($"Casted {Name}");
 
-            if (MaxStacks > 1 && currentStacks != MaxStacks)
+            if (MaxStacks > 1 && CurrentStacks != MaxStacks)
             {
                 ReduceStacks();
             }
@@ -96,7 +98,7 @@ namespace Oh_gee_CD
                         do
                         {
                             CooldownTimer = (int)Recast.TotalSeconds;
-                            PluginLog.Debug($"Looping for {Name}: {currentStacks}/{MaxStacks}, from now: +{recastTimer.TotalSeconds}s");
+                            PluginLog.Debug($"Looping for {Name}: {CurrentStacks}/{MaxStacks}, from now: +{recastTimer.TotalSeconds}s");
                             var waitingTime = (int)(recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds);
                             while(waitingTime > 0)
                             {
@@ -120,9 +122,9 @@ namespace Oh_gee_CD
                             }
                             //await Task.Delay((int)(recastTimer.TotalMilliseconds - (recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds)), cts.Token);
                             PluginLog.Debug($"{Name} available again!");
-                            currentStacks++;
+                            CurrentStacks++;
 
-                        } while (currentStacks != MaxStacks && !cts.IsCancellationRequested);
+                        } while (CurrentStacks != MaxStacks && !cts.IsCancellationRequested);
                     }
                     catch (TaskCanceledException)
                     {
@@ -136,8 +138,8 @@ namespace Oh_gee_CD
 
         private void ReduceStacks()
         {
-            currentStacks--;
-            PluginLog.Debug($"Reducing stacks for {Name} to {currentStacks}");
+            CurrentStacks--;
+            PluginLog.Debug($"Reducing stacks for {Name} to {CurrentStacks}");
         }
 
         public void Dispose()
