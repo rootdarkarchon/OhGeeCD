@@ -29,6 +29,7 @@ namespace Oh_gee_CD
         private PlayerManager playerManager;
         private SoundManager soundManager;
         private WindowSystem system;
+        private DrawHelper drawHelper;
         private SettingsUI ui;
 
         public Plugin(
@@ -43,15 +44,16 @@ namespace Oh_gee_CD
             ChatHandlers = chatHandlers;
             DataManager = dataManager;
             soundManager = new SoundManager();
-            playerManager = new PlayerManager(framework, dataManager, clientState, soundManager);
+            drawHelper = new DrawHelper(dataManager);
+            system = new WindowSystem("OhGeeCD");
+
+            playerManager = new PlayerManager(framework, dataManager, clientState, soundManager, system, drawHelper);
             Configuration = PluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager);
             Configuration.Initialize(PluginInterface);
-            system = new WindowSystem("OhGeeCD");
-            ui = new SettingsUI(playerManager, system, dataManager);
+            ui = new SettingsUI(playerManager, system, dataManager, drawHelper);
             soundManager.RegisterSoundSource(ui);
 
             commandManager.AddHandler(commandName, new CommandInfo(OnCommand));
-
 
             if (!clientState.IsLoggedIn)
             {

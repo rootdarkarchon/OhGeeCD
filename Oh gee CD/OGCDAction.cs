@@ -46,6 +46,8 @@ namespace Oh_gee_CD
         public bool IsCurrentClassJob { get; private set; }
         [JsonIgnore]
         public bool IsAvailable => currentJobLevel >= RequiredJobLevel;
+        [JsonIgnore]
+        public double CooldownTimer { get; private set; }
         private uint currentJobLevel;
 
         public event EventHandler<SoundEventArgs>? SoundEvent;
@@ -86,22 +88,37 @@ namespace Oh_gee_CD
             }
             else
             {
-                Task countdown = new(async () =>
+                Task countdown = new(() =>
                 {
                     try
                     {
                         ReduceStacks();
                         do
                         {
+                            CooldownTimer = (int)Recast.TotalSeconds;
                             PluginLog.Debug($"Looping for {Name}: {currentStacks}/{MaxStacks}, from now: +{recastTimer.TotalSeconds}s");
-                            await Task.Delay((int)(recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds), cts.Token);
+                            var waitingTime = (int)(recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds);
+                            while(waitingTime > 0)
+                            {
+                                Thread.Sleep(100);
+                                CooldownTimer -= 0.1;
+                                waitingTime -= 100;
+                            }
+                            //await Task.Delay((int)(recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds), cts.Token);
                             if (IsCurrentClassJob)
                             {
                                 SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
                                     SoundEffectEnabled ? SoundEffect : null,
                                     SoundEffectEnabled ? SoundPath : null));
                             }
-                            await Task.Delay((int)(recastTimer.TotalMilliseconds - (recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds)), cts.Token);
+                            var remainingWaitingTime = (int)(recastTimer.TotalMilliseconds - (recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds));
+                            while(remainingWaitingTime > 0)
+                            {
+                                Thread.Sleep(100);
+                                CooldownTimer -= 0.1;
+                                remainingWaitingTime -= 100;
+                            }
+                            //await Task.Delay((int)(recastTimer.TotalMilliseconds - (recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds)), cts.Token);
                             PluginLog.Debug($"{Name} available again!");
                             currentStacks++;
 

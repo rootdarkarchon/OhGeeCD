@@ -1,4 +1,5 @@
 ﻿using Dalamud.Data;
+using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using ImGuiNET;
@@ -14,14 +15,53 @@ using System.Windows.Forms;
 
 namespace Oh_gee_CD
 {
+    public class OGCDBarUI : Window
+    {
+        private readonly OGCDBar bar;
+        private readonly WindowSystem system;
+        private readonly PlayerManager playerManager;
+        private readonly DrawHelper drawHelper;
+
+        public OGCDBarUI(OGCDBar bar, WindowSystem system, PlayerManager playerManager, DrawHelper drawHelper) : base("OGCDBarTest2" + bar.Name + bar.Id, ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoTitleBar)
+        {
+            this.bar = bar;
+            this.system = system;
+            this.playerManager = playerManager;
+            this.drawHelper = drawHelper;
+            system.AddWindow(this);
+            this.Toggle();
+        }
+
+        public override void Draw()
+        {
+            if (!IsOpen) return;
+            var job = playerManager.Jobs.SingleOrDefault(j => j.IsActive);
+            if (job == null) return;
+            var jobActions = job.Actions.Where(j => j.OGCDBarId == bar.Id).ToArray();
+            int i = 0;
+            foreach (var action in jobActions)
+            {
+                ImGui.SetCursorPos(ImGuiHelpers.ScaledVector2(64 * i, 4));
+                drawHelper.DrawIcon(action.Icon, new Vector2(64, 64));
+                i++;
+            }
+            ImGui.SetWindowSize(ImGuiHelpers.ScaledVector2(64 * jobActions.Length, 64));
+        }
+
+        public void Dispose()
+        {
+            system.RemoveWindow(this);
+        }
+    }
+
     internal class SettingsUI : Window, IDisposable, ISoundSource
     {
         private readonly PlayerManager manager;
         private readonly WindowSystem system;
         private readonly DataManager dataManager;
-        private readonly Dictionary<uint, TextureWrap> textures = new();
+        private readonly DrawHelper drawHelper;
 
-        public SettingsUI(PlayerManager manager, WindowSystem system, DataManager dataManager) : base("Oh gee, CD Settings v" + Assembly.GetExecutingAssembly().GetName().Version)
+        public SettingsUI(PlayerManager manager, WindowSystem system, DataManager dataManager, DrawHelper drawHelper) : base("Oh gee, CD Settings v" + Assembly.GetExecutingAssembly().GetName().Version)
         {
             SizeConstraints = new WindowSizeConstraints()
             {
@@ -33,6 +73,7 @@ namespace Oh_gee_CD
             this.manager = manager;
             this.system = system;
             this.dataManager = dataManager;
+            this.drawHelper = drawHelper;
             if (manager.OGCDBars.Count > 0) selectedOGCDIndex = 0;
         }
 
@@ -73,16 +114,16 @@ namespace Oh_gee_CD
             if (ImGui.Button("+"))
             {
                 var barId = manager.OGCDBars.OrderBy(b => b.Id).LastOrDefault()?.Id ?? 1;
-                manager.OGCDBars.Add(new OGCDBar(barId, "New OGCD Bar #" + barId));
+                manager.AddOGCDBar(new OGCDBar(barId, "New OGCD Bar #" + barId));
             }
 
             ImGui.SameLine();
 
             if (ImGui.Button("-"))
             {
-                if (selectedOGCDIndex < 0) return; 
+                if (selectedOGCDIndex < 0) return;
                 var removedOGCDBarId = manager.OGCDBars[selectedOGCDIndex].Id;
-                manager.OGCDBars.Remove(manager.OGCDBars[selectedOGCDIndex]);
+                manager.RemoveOGCDBar(manager.OGCDBars[selectedOGCDIndex]);
                 foreach (var job in manager.Jobs.SelectMany(j => j.Actions))
                 {
                     if (job.OGCDBarId == removedOGCDBarId) job.OGCDBarId = 0;
@@ -118,6 +159,12 @@ namespace Oh_gee_CD
 
         private void DrawOGCDBar(OGCDBar bar)
         {
+            var editPosition = bar.InEditMode;
+            if (ImGui.Checkbox("Edit Position", ref editPosition))
+            {
+                bar.InEditMode = editPosition;
+            }
+
             string name = bar.Name;
             if (ImGui.InputText("Name", ref name, 100))
             {
@@ -127,6 +174,88 @@ namespace Oh_gee_CD
                 }
                 bar.Name = name;
             }
+
+            int horizontalPadding = bar.HorizontalPadding;
+            if (ImGui.SliderInt("Horizontal Padding", ref horizontalPadding, 0, 100))
+            {
+                bar.HorizontalPadding = horizontalPadding;
+            }
+
+            int verticalPadding = bar.VerticalPadding;
+            if (ImGui.SliderInt("Vertical Padding", ref verticalPadding, 0, 100))
+            {
+                bar.VerticalPadding = verticalPadding;
+            }
+
+            int maxItemsHorizontal = bar.MaxItemsHorizontal;
+            if (ImGui.SliderInt("Max horizontal items", ref maxItemsHorizontal, 0, 10))
+            {
+                bar.MaxItemsHorizontal = maxItemsHorizontal;
+            }
+
+            int maxItemsVertical = bar.MaxItemsVertical;
+            if (ImGui.SliderInt("Max vertical items", ref maxItemsVertical, 0, 10))
+            {
+                bar.MaxItemsVertical = maxItemsVertical;
+            }
+
+            double scale = bar.Scale;
+            if (ImGui.InputDouble("Scale", ref scale, 0.1, 0.5, "%.2f"))
+            {
+                if (scale > 2) scale = 2;
+                if (scale < 0.25) scale = 0.25;
+                bar.Scale = scale;
+            }
+
+            if (ImGui.BeginCombo("Horizontal Layout", bar.HorizontalLayout.ToString()))
+            {
+                foreach (var value in Enum.GetValues<OGCDBarHorizontalLayout>())
+                {
+                    if (ImGui.Selectable(value.ToString(), value == bar.HorizontalLayout))
+                    {
+                        bar.HorizontalLayout = value;
+                    }
+
+                    if (value == bar.HorizontalLayout)
+                    {
+                        ImGui.SetItemDefaultFocus();
+                    }
+                }
+                ImGui.EndCombo();
+            }
+
+            if (ImGui.BeginCombo("Vertical Layout", bar.VerticalLayout.ToString()))
+            {
+                foreach (var value in Enum.GetValues<OGCDBarVerticalLayout>())
+                {
+                    if (ImGui.Selectable(value.ToString(), value == bar.VerticalLayout))
+                    {
+                        bar.VerticalLayout = value;
+                    }
+
+                    if (value == bar.VerticalLayout)
+                    {
+                        ImGui.SetItemDefaultFocus();
+                    }
+                }
+                ImGui.EndCombo();
+            }
+
+            ImGui.Text("Items currently in bar:");
+            ImGui.Indent();
+
+            foreach (var job in manager.Jobs)
+            {
+                foreach (var action in job.Actions)
+                {
+                    if (action.DrawOnOGCDBar && action.OGCDBarId == bar.Id)
+                    {
+                        ImGui.Text($"{job.Abbreviation}: {action.Name}");
+                    }
+                }
+            }
+
+            ImGui.Unindent();
         }
 
         private void DrawGeneralSettings()
@@ -189,7 +318,7 @@ namespace Oh_gee_CD
 
         public void DrawOGCDAction(Job job, OGCDAction action)
         {
-            DrawIcon(action.Icon);
+            drawHelper.DrawIcon(action.Icon, new Vector2(24, 24));
             if (action.IsAvailable)
             {
                 ImGui.Text(action.Name);
@@ -197,7 +326,7 @@ namespace Oh_gee_CD
             else
             {
                 ImGui.TextDisabled(action.Name);
-                DrawHelper($"You currently cannot execute this ability, your {job.Abbreviation} is level {job.Level}, ability is level {action.RequiredJobLevel}.");
+                DrawHelper.DrawHelpText($"You currently cannot execute this ability, your {job.Abbreviation} is level {job.Level}, ability is level {action.RequiredJobLevel}.");
             }
             ImGui.SameLine(300);
 
@@ -301,7 +430,10 @@ namespace Oh_gee_CD
                     SoundEvent?.Invoke(null, new SoundEventArgs(null, soundId, null));
                 }
 
-                ImGui.SetNextItemWidth(350);
+                ImGui.Text("Custom sound");
+                ImGui.SameLine();
+
+                ImGui.SetNextItemWidth(200);
                 string customSoundPath = action.SoundPath;
                 if (ImGui.InputText("##SoundPath" + action.Name, ref customSoundPath, 500))
                 {
@@ -337,7 +469,7 @@ namespace Oh_gee_CD
                     if (earlyCallout > action.Recast.TotalSeconds) earlyCallout = action.Recast.TotalSeconds;
                     action.EarlyCallout = earlyCallout;
                 }
-                DrawHelper("This will give the callout earlier than the skill is available.");
+                DrawHelper.DrawHelpText("This will give the callout earlier than the skill is available.");
             }
 
             if (action.DrawOnOGCDBar)
@@ -375,7 +507,24 @@ namespace Oh_gee_CD
             ImGui.Separator();
         }
 
-        private void DrawIcon(uint icon)
+        public void Dispose()
+        {
+            system.RemoveWindow(this);
+        }
+    }
+
+    public class DrawHelper
+    {
+
+        public readonly Dictionary<uint, TextureWrap> textures = new();
+        private readonly DataManager dataManager;
+
+        public DrawHelper(DataManager dataManager)
+        {
+            this.dataManager = dataManager;
+        }
+
+        public void DrawIcon(uint icon, Vector2 size, bool sameLine = true)
         {
             TextureWrap? hqicon;
             if (textures.ContainsKey(icon))
@@ -389,11 +538,14 @@ namespace Oh_gee_CD
                 textures.Add(icon, hqicon);
             }
 
-            ImGui.Image(hqicon.ImGuiHandle, new Vector2(24, 24));
-            ImGui.SameLine();
+            ImGui.Image(hqicon.ImGuiHandle, size);
+            if (sameLine)
+            {
+                ImGui.SameLine();
+            }
         }
 
-        private void DrawHelper(string helpText)
+        public static void DrawHelpText(string helpText)
         {
             ImGui.SameLine();
             ImGui.TextDisabled("(?)");
@@ -407,9 +559,5 @@ namespace Oh_gee_CD
             }
         }
 
-        public void Dispose()
-        {
-            system.RemoveWindow(this);
-        }
     }
 }

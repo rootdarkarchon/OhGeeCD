@@ -2,6 +2,7 @@
 using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.Hooking;
+using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using FFXIVClientStructs;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -20,6 +21,9 @@ namespace Oh_gee_CD
         private readonly Framework framework;
         private readonly DataManager dataManager;
         private readonly ClientState clientState;
+        private readonly WindowSystem system;
+        private readonly DrawHelper helper;
+
         [JsonProperty]
         public SoundManager SoundManager { get; init; }
         public List<Job> Jobs { get; set; } = new();
@@ -39,12 +43,14 @@ namespace Oh_gee_CD
             UseActionHook = null!;
         }
 
-        public PlayerManager(Framework framework, DataManager dataManager, ClientState clientState, SoundManager soundManager)
+        public PlayerManager(Framework framework, DataManager dataManager, ClientState clientState, SoundManager soundManager, WindowSystem system, DrawHelper helper)
         {
             this.framework = framework;
             this.dataManager = dataManager;
             this.clientState = clientState;
             this.SoundManager = soundManager;
+            this.system = system;
+            this.helper = helper;
             UseActionHook = new Hook<UseActionDelegate>((IntPtr)ActionManager.fpUseAction, UseActionDetour);
         }
 
@@ -146,8 +152,20 @@ namespace Oh_gee_CD
 
             RestoreDataFromConfiguration(configuration);
 
+            SpawnBars();
+
             framework.Update += Framework_Update;
             UseActionHook.Enable();
+        }
+
+        private void SpawnBars()
+        {
+            foreach (var bar in OGCDBars)
+            {
+                PluginLog.Debug("Spawning " + bar.Name);
+                OGCDBarUI ui = new OGCDBarUI(bar, system, this, helper);
+                bar.UI = ui;
+            }
         }
 
         private void RestoreDataFromConfiguration(OhGeeCDConfiguration configuration)
@@ -174,6 +192,21 @@ namespace Oh_gee_CD
             SoundManager.SelectedVoiceCulture = configuration.LoadedPlayerManager.SoundManager?.SelectedVoiceCulture ?? "en-US";
         }
 
+        public void AddOGCDBar(OGCDBar bar)
+        {
+            OGCDBarUI ui = new OGCDBarUI(bar, system, this, helper);
+            bar.UI = ui;
+            OGCDBars.Add(bar);
+        }
+
+        public int RemoveOGCDBar(OGCDBar bar)
+        {
+            var barID = bar.Id;
+            OGCDBars.Remove(bar);
+            return barID;
+        }
+
+
         public void Dispose()
         {
             foreach (var job in Jobs)
@@ -183,6 +216,11 @@ namespace Oh_gee_CD
                 {
                     SoundManager.UnregisterSoundSource(action);
                 }
+            }
+
+            foreach (var bar in OGCDBars)
+            {
+                bar.Dispose();
             }
 
             UseActionHook?.Dispose();
