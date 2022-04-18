@@ -60,7 +60,7 @@ namespace Oh_gee_CD
             Name = name;
             Recast = recast;
             TextToSpeechName = name;
-            CooldownGroup = cooldownGroup;
+            CooldownGroup = (byte)(cooldownGroup - 1);
             RequiredJobLevel = requiredLevel;
             this.currentJobLevel = currentJobLevel;
             MaxStacks = (short)ActionManager.GetMaxCharges(Id, currentJobLevel);
@@ -78,8 +78,58 @@ namespace Oh_gee_CD
             TextToSpeechName = newname;
         }
 
-        public void StartCountdown()
+        private bool timerRunning = false;
+
+        public unsafe void StartCountdown(ActionManager* actionManager)
         {
+            Task.Run(() =>
+            {
+                var detail = actionManager->GetRecastGroupDetail(CooldownGroup);
+                if (detail->IsActive == 1 && timerRunning)
+                {
+                    PluginLog.Debug("Recast timer is active for " + Name);
+                    CurrentStacks--;
+                    return;
+                }
+
+                CurrentStacks--;
+                timerRunning = true;
+                bool soundPlayed = false;
+                var prevCoolDown = CooldownTimer;
+                while (detail->IsActive == 1 && !cts.IsCancellationRequested)
+                {
+                    Thread.Sleep(100);
+                    detail = actionManager->GetRecastGroupDetail(CooldownGroup);
+
+                    var curTimeElapsed = detail->Elapsed;
+
+                    CooldownTimer = ((Recast.TotalSeconds * MaxStacks - curTimeElapsed) % Recast.TotalSeconds);
+
+                    if (IsCurrentClassJob && CooldownTimer <= EarlyCallout && !soundPlayed)
+                    {
+                        soundPlayed = true;
+                        SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
+                            SoundEffectEnabled ? SoundEffect : null,
+                            SoundEffectEnabled ? SoundPath : null));
+                    }
+
+                    PluginLog.Debug("Looping recast timer active " + Name + ", " + CooldownTimer + ";" + curTimeElapsed);
+                    prevCoolDown = CooldownTimer;
+                }
+
+                if (IsCurrentClassJob && !soundPlayed)
+                {
+                    soundPlayed = true;
+                    SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
+                        SoundEffectEnabled ? SoundEffect : null,
+                        SoundEffectEnabled ? SoundPath : null));
+                }
+
+                CooldownTimer = 0;
+                CurrentStacks++;
+                timerRunning = false;
+            }, cts.Token);
+            /*
             TimeSpan recastTimer = Recast;
             if (CurrentStacks == 0) return;
             PluginLog.Debug($"Casted {Name}");
@@ -100,7 +150,7 @@ namespace Oh_gee_CD
                             CooldownTimer = (int)Recast.TotalSeconds;
                             PluginLog.Debug($"Looping for {Name}: {CurrentStacks}/{MaxStacks}, from now: +{recastTimer.TotalSeconds}s");
                             var waitingTime = (int)(recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds);
-                            while(waitingTime > 0)
+                            while (waitingTime > 0)
                             {
                                 Thread.Sleep(100);
                                 CooldownTimer -= 0.1;
@@ -114,7 +164,7 @@ namespace Oh_gee_CD
                                     SoundEffectEnabled ? SoundPath : null));
                             }
                             var remainingWaitingTime = (int)(recastTimer.TotalMilliseconds - (recastTimer.TotalMilliseconds - TimeSpan.FromSeconds(EarlyCallout).TotalMilliseconds));
-                            while(remainingWaitingTime > 0)
+                            while (remainingWaitingTime > 0)
                             {
                                 Thread.Sleep(100);
                                 CooldownTimer -= 0.1;
@@ -133,7 +183,7 @@ namespace Oh_gee_CD
                 }, cts.Token);
 
                 countdown.Start();
-            }
+            }*/
         }
 
         private void ReduceStacks()
