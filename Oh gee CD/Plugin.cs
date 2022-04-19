@@ -3,7 +3,6 @@ using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
-using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -20,26 +19,24 @@ namespace Oh_gee_CD
         private DalamudPluginInterface PluginInterface { get; init; }
         private CommandManager CommandManager { get; init; }
         public ClientState ClientState { get; }
-        public ChatGui ChatHandlers { get; }
         public DataManager DataManager { get; }
         private OhGeeCDConfiguration Configuration { get; init; }
 
-        private PlayerManager playerManager;
-        private SoundManager soundManager;
-        private WindowSystem system;
-        private DrawHelper drawHelper;
-        private SettingsUI ui;
+        private readonly PlayerManager playerManager;
+        private readonly SoundManager soundManager;
+        private readonly WindowSystem system;
+        private readonly DrawHelper drawHelper;
+        private readonly SettingsUI ui;
 
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
             [RequiredVersion("1.0")] CommandManager commandManager,
-            ClientState clientState, ChatGui chatHandlers, DataManager dataManager,
+            ClientState clientState, DataManager dataManager,
             Framework framework, Condition condition)
         {
             PluginInterface = pluginInterface;
             CommandManager = commandManager;
             ClientState = clientState;
-            ChatHandlers = chatHandlers;
             DataManager = dataManager;
             soundManager = new SoundManager();
             drawHelper = new DrawHelper(dataManager);
@@ -49,7 +46,6 @@ namespace Oh_gee_CD
             Configuration = PluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager);
             Configuration.Initialize(PluginInterface);
             ui = new SettingsUI(playerManager, system, drawHelper);
-            soundManager.RegisterSoundSource(ui);
 
             commandManager.AddHandler(commandName, new CommandInfo(OnCommand));
 
@@ -65,11 +61,12 @@ namespace Oh_gee_CD
 
         private void State_Login(object? sender, EventArgs e)
         {
+            playerManager.Initialize(Configuration);
+            Configuration.LoadedPlayerManager.Dispose();
+            Configuration.LoadedPlayerManager = playerManager;
+
             PluginInterface.UiBuilder.Draw += DrawUI;
             PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
-
-            playerManager.Initialize(Configuration);
-            Configuration.LoadedPlayerManager = playerManager;
 
             Configuration.Save();
         }
@@ -79,6 +76,8 @@ namespace Oh_gee_CD
             Configuration.Save();
             soundManager.UnregisterSoundSource(ui);
 
+            PluginInterface.UiBuilder.Draw -= DrawUI;
+            PluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUI;
             CommandManager.RemoveHandler(commandName);
             playerManager.Dispose();
             ui.Dispose();

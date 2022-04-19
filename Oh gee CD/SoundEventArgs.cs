@@ -13,5 +13,10 @@
             TextToSpeech = textToSpeech ?? string.Empty;
             SoundPath = soundPath ?? string.Empty;
         }
+
+        public override string ToString()
+        {
+            return $"SoundEvent; Forced: {ForceSound}; TTS: {TextToSpeech}; SoundId: {SoundId}; SoundPath: {SoundPath}";
+        }
     }
 }

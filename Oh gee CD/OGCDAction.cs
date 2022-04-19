@@ -4,14 +4,15 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Oh_gee_CD
 {
     [Serializable]
     public class OGCDAction : IDisposable, ISoundSource
     {
-        [JsonProperty]
-        public uint Id { get; set; }
+        public List<OGCDAbility> Abilities { get; set; } = new();
         [JsonProperty]
         public int OGCDBarId { get; set; } = 0;
         [JsonProperty]
@@ -27,50 +28,51 @@ namespace Oh_gee_CD
         public double EarlyCallout { get; set; } = 0;
         [JsonProperty]
         public string SoundPath { get; set; } = string.Empty;
+        [JsonProperty]
+        public byte RecastGroup { get; set; }
 
-        [JsonIgnore]
-        public uint Icon { get; set; }
-        [JsonIgnore]
-        public string Name { get; set; }
         [JsonIgnore]
         public TimeSpan Recast { get; set; }
         [JsonIgnore]
-        public byte CooldownGroup { get; }
+        public short MaxCharges { get; private set; }
         [JsonIgnore]
-        public short MaxStacks { get; private set; }
-        [JsonIgnore]
-        public short CurrentStacks { get; private set; }
-        readonly CancellationTokenSource cts;
-        [JsonIgnore]
-        public byte RequiredJobLevel { get; private init; }
+        public short CurrentCharges { get; private set; }
         [JsonIgnore]
         public bool IsCurrentClassJob { get; private set; }
         [JsonIgnore]
-        public bool IsAvailable => currentJobLevel >= RequiredJobLevel;
-        [JsonIgnore]
         public double CooldownTimer { get; private set; }
         private uint currentJobLevel;
+        readonly CancellationTokenSource cts;
 
         public event EventHandler<SoundEventArgs>? SoundEvent;
 
-        public OGCDAction(uint id, uint icon, string name, TimeSpan recast, byte cooldownGroup, byte requiredLevel, uint currentJobLevel)
+        /// <summary>
+        /// serialization constructor
+        /// </summary>
+        public OGCDAction()
         {
-            Id = id;
-            Icon = icon;
-            Name = name;
+            TextToSpeechName = null!;
+            cts = null!;
+        }
+
+        public OGCDAction(OGCDAbility ability, TimeSpan recast, byte cooldownGroup, uint currentJobLevel)
+        {
+            Abilities.Add(ability);
             Recast = recast;
-            TextToSpeechName = name;
-            CooldownGroup = (byte)(cooldownGroup - 1);
-            RequiredJobLevel = requiredLevel;
+            TextToSpeechName = ability.Name;
+            RecastGroup = cooldownGroup;
             this.currentJobLevel = currentJobLevel;
-            MaxStacks = (short)ActionManager.GetMaxCharges(Id, currentJobLevel);
-            CurrentStacks = MaxStacks;
+            MaxCharges = (short)ActionManager.GetMaxCharges(ability.Id, currentJobLevel);
+            CurrentCharges = MaxCharges;
             cts = new CancellationTokenSource();
         }
 
         public void Debug()
         {
-            PluginLog.Debug($"Id:{Id} | Name:{Name} | MaxStack:{MaxStacks} | CD:{Recast.TotalSeconds}s | ReqLevel:{RequiredJobLevel} | CanCast:{IsAvailable}");
+            foreach (var ability in Abilities)
+            {
+                PluginLog.Debug($"Id:{ability.Id} | Name:{ability.Name} | MaxCharges:{MaxCharges} | CD:{Recast.TotalSeconds}s | ReqLevel:{ability.RequiredJobLevel} | CanCast:{ability.IsAvailable} | OverWritesOrOverwritten:{ability.OverwritesOrIsOverwritten}");
+            }
         }
 
         public void SetTextToSpeechName(string newname)
@@ -83,38 +85,37 @@ namespace Oh_gee_CD
 
         public unsafe void StartCountdown(ActionManager* actionManager, bool playSound = true)
         {
+            if (timerRunning)
+            {
+                return;
+            }
             Task.Run(() =>
             {
-                var detail = actionManager->GetRecastGroupDetail(CooldownGroup);
-                if (detail->IsActive == 1 && timerRunning)
-                {
-                    if(playSound)
-                        soundQueue++;
-                    PluginLog.Debug("Recast timer is active for " + Name);
-                    return;
-                }
-
-                PluginLog.Debug("First cast " + Name + "(" + CooldownGroup + ")");
-
                 soundQueue = playSound ? 1 : 0;
                 timerRunning = true;
                 CooldownTimer = 0;
                 bool earlyCallOutReset = true;
-                Thread.Sleep(1000);
+                var detail = actionManager->GetRecastGroupDetail(RecastGroup);
+                CurrentCharges = (short)Math.Floor(detail->Elapsed / Recast.TotalSeconds);
+
                 do
                 {
-                    Thread.Sleep(100);
-                    detail = actionManager->GetRecastGroupDetail(CooldownGroup);
+                    detail = actionManager->GetRecastGroupDetail(RecastGroup);
 
                     var curTimeElapsed = detail->Elapsed;
 
-                    earlyCallOutReset = earlyCallOutReset || CooldownTimer < ((Recast.TotalSeconds * MaxStacks - curTimeElapsed) % Recast.TotalSeconds);
-                    CooldownTimer = ((Recast.TotalSeconds * MaxStacks - curTimeElapsed) % Recast.TotalSeconds);
+                    earlyCallOutReset = earlyCallOutReset || CooldownTimer < ((Recast.TotalSeconds * MaxCharges - curTimeElapsed) % Recast.TotalSeconds);
+                    CooldownTimer = ((Recast.TotalSeconds * MaxCharges - curTimeElapsed) % Recast.TotalSeconds);
 
                     var stacks = (short)Math.Floor(detail->Elapsed / Recast.TotalSeconds);
 
+                    if (stacks < CurrentCharges)
+                    {
+                        soundQueue++;
+                    }
+
                     if (IsCurrentClassJob
-                        && ((soundQueue > 1 && stacks > CurrentStacks && EarlyCallout == 0.0)
+                        && ((soundQueue > 1 && stacks > CurrentCharges && EarlyCallout == 0.0)
                            || (CooldownTimer <= EarlyCallout && soundQueue >= 1 && earlyCallOutReset)))
                     {
                         PlaySound();
@@ -122,11 +123,12 @@ namespace Oh_gee_CD
                         if (soundQueue > 0) soundQueue--;
                     }
 
-                    CurrentStacks = stacks;
+                    CurrentCharges = stacks;
+                    Thread.Sleep(100);
 
-                } while (detail->IsActive == 1 && !cts.IsCancellationRequested && CurrentStacks != MaxStacks);
+                } while (detail->IsActive == 1 && !cts.IsCancellationRequested && CurrentCharges != MaxCharges);
 
-                CurrentStacks = MaxStacks;
+                CurrentCharges = MaxCharges;
                 if (IsCurrentClassJob && soundQueue == 1)
                 {
                     PlaySound();
@@ -144,16 +146,10 @@ namespace Oh_gee_CD
                 SoundEffectEnabled ? SoundPath : null));
         }
 
-        private void ReduceStacks()
-        {
-            CurrentStacks--;
-            PluginLog.Debug($"Reducing stacks for {Name} to {CurrentStacks}");
-        }
-
         public void Dispose()
         {
             IsCurrentClassJob = false;
-            cts.Cancel();
+            cts?.Cancel();
         }
 
         public void MakeInactive()
@@ -165,8 +161,12 @@ namespace Oh_gee_CD
         {
             IsCurrentClassJob = true;
             this.currentJobLevel = currentJobLevel;
-            MaxStacks = (short)ActionManager.GetMaxCharges(Id, currentJobLevel);
-            CurrentStacks = MaxStacks;
+            MaxCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, currentJobLevel);
+            CurrentCharges = MaxCharges;
+            foreach (var ability in Abilities)
+            {
+                ability.CurrentJobLevel = currentJobLevel;
+            }
         }
 
         public void UpdateValuesFromOtherAction(OGCDAction fittingActionFromConfig)

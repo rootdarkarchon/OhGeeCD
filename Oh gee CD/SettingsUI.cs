@@ -27,6 +27,7 @@ namespace Oh_gee_CD
             this.manager = manager;
             this.system = system;
             this.drawHelper = drawHelper;
+            manager.SoundManager.RegisterSoundSource(this);
             if (manager.OGCDBars.Count > 0) selectedOGCDIndex = 0;
         }
 
@@ -197,7 +198,10 @@ namespace Oh_gee_CD
                 {
                     if (action.DrawOnOGCDBar && action.OGCDBarId == bar.Id)
                     {
-                        ImGui.Text($"{job.Abbreviation}: {action.Name}");
+                        foreach(var ability in action.Abilities)
+                        {
+                            ImGui.Text($"{job.Abbreviation}: {ability.Name}");
+                        }
                     }
                 }
             }
@@ -271,38 +275,58 @@ namespace Oh_gee_CD
 
         public void DrawOGCDAction(Job job, OGCDAction action)
         {
-            drawHelper.DrawIcon(action.Icon, new Vector2(24, 24));
-            if (action.IsAvailable)
+            for (int i = 0; i < action.Abilities.Count; i++)
             {
-                ImGui.Text(action.Name);
-            }
-            else
-            {
-                ImGui.TextDisabled(action.Name);
-                DrawHelper.DrawHelpText($"You currently cannot execute this ability, your {job.Abbreviation} is level {job.Level}, ability is level {action.RequiredJobLevel}.");
-            }
-            ImGui.SameLine(300);
+                OGCDAbility ability = action.Abilities[i];
+                if (i > 0)
+                {
+                    ImGui.Text("+");
+                    ImGui.SameLine();
+                }
+                drawHelper.DrawIcon(ability.Icon, new Vector2(24, 24));
+                if (ability.OtherId != null && ability.OtherId.IsAvailable)
+                {
+                    ImGui.TextDisabled(ability.Name);
+                    DrawHelper.DrawHelpText($"This ability is overwritten by one of a higher level: {ability.OtherId.Name}");
+                }
+                else
+                {
+                    if (ability.IsAvailable)
+                    {
+                        ImGui.Text(ability.Name);
+                    }
+                    else
+                    {
+                        ImGui.TextDisabled(ability.Name);
+                        DrawHelper.DrawHelpText($"You currently cannot execute this ability, your {job.Abbreviation} is level {job.Level}, ability is level {ability.RequiredJobLevel}.");
+                    }
+                }
+                if (i == 0)
+                {
+                    ImGui.SameLine(300);
 
-            bool ttsEnabled = action.TextToSpeechEnabled;
-            if (ImGui.Checkbox("Play TTS##" + action.Name, ref ttsEnabled))
-            {
-                action.TextToSpeechEnabled = ttsEnabled;
-            }
+                    bool ttsEnabled = action.TextToSpeechEnabled;
+                    if (ImGui.Checkbox("Play TTS##" + ability.Name, ref ttsEnabled))
+                    {
+                        action.TextToSpeechEnabled = ttsEnabled;
+                    }
 
-            ImGui.SameLine(400);
+                    ImGui.SameLine(400);
 
-            bool soundEnabled = action.SoundEffectEnabled;
-            if (ImGui.Checkbox("Play Sound##" + action.Name, ref soundEnabled))
-            {
-                action.SoundEffectEnabled = soundEnabled;
-            }
+                    bool soundEnabled = action.SoundEffectEnabled;
+                    if (ImGui.Checkbox("Play Sound##" + ability.Name, ref soundEnabled))
+                    {
+                        action.SoundEffectEnabled = soundEnabled;
+                    }
 
-            ImGui.SameLine(510);
+                    ImGui.SameLine(510);
 
-            bool onGCDBar = action.DrawOnOGCDBar;
-            if (ImGui.Checkbox("On OGCDBar##" + action.Name, ref onGCDBar))
-            {
-                action.DrawOnOGCDBar = onGCDBar;
+                    bool onGCDBar = action.DrawOnOGCDBar;
+                    if (ImGui.Checkbox("On OGCDBar##" + ability.Name, ref onGCDBar))
+                    {
+                        action.DrawOnOGCDBar = onGCDBar;
+                    }
+                }
             }
 
             ImGui.Indent(32);
@@ -313,14 +337,14 @@ namespace Oh_gee_CD
                 string ttsString = action.TextToSpeechName;
                 ImGui.SetNextItemWidth(150);
 
-                if (ImGui.InputText("Text to say##TextToString" + action.Name, ref ttsString, 50))
+                if (ImGui.InputText("Text to say##TextToString" + action.RecastGroup, ref ttsString, 50))
                 {
                     action.TextToSpeechName = ttsString;
                 }
 
                 ImGui.SameLine(280);
 
-                if (ImGui.Button("Test TTS##" + action.Name))
+                if (ImGui.Button("Test TTS##" + action.RecastGroup))
                 {
                     SoundEvent?.Invoke(null, new SoundEventArgs(action.TextToSpeechName, null, null) { ForceSound = true });
                 }
@@ -330,7 +354,7 @@ namespace Oh_gee_CD
             {
                 ImGui.SetNextItemWidth(150);
 
-                if (ImGui.BeginCombo("Sound Effect##" + action.Name, action.SoundEffect.ToString() == "0" ? "None" : action.SoundEffect.ToString()))
+                if (ImGui.BeginCombo("Sound Effect##" + action.RecastGroup, action.SoundEffect.ToString() == "0" ? "None" : action.SoundEffect.ToString()))
                 {
                     if (ImGui.Selectable("None", action.SoundEffect == 0))
                     {
@@ -359,7 +383,7 @@ namespace Oh_gee_CD
                 }
 
                 ImGui.SameLine();
-                if (ImGui.Button("+"))
+                if (ImGui.Button("+##" + action.RecastGroup))
                 {
                     action.SoundEffect = action.SoundEffect + 1;
                     if (action.SoundEffect > 80) action.SoundEffect = 80;
@@ -367,7 +391,7 @@ namespace Oh_gee_CD
                 }
 
                 ImGui.SameLine();
-                if (ImGui.Button("-"))
+                if (ImGui.Button("-##" + action.RecastGroup))
                 {
                     action.SoundEffect = action.SoundEffect - 1;
                     if (action.SoundEffect < 0) action.SoundEffect = 0;
@@ -378,7 +402,7 @@ namespace Oh_gee_CD
 
                 ImGui.SameLine();
 
-                if (ImGui.Button("Test Sound##" + action.Name))
+                if (ImGui.Button("Test Sound##" + action.RecastGroup))
                 {
                     SoundEvent?.Invoke(null, new SoundEventArgs(null, soundId, null) { ForceSound = true });
                 }
@@ -388,13 +412,13 @@ namespace Oh_gee_CD
 
                 ImGui.SetNextItemWidth(200);
                 string customSoundPath = action.SoundPath;
-                if (ImGui.InputText("##SoundPath" + action.Name, ref customSoundPath, 500))
+                if (ImGui.InputText("##SoundPath" + action.RecastGroup, ref customSoundPath, 500))
                 {
                     action.SoundPath = customSoundPath;
                 }
 
                 ImGui.SameLine();
-                if (ImGui.Button("Open File##" + action.Name))
+                if (ImGui.Button("Open File##" + action.RecastGroup))
                 {
                     var fileDialog = new OpenFileDialog();
                     fileDialog.Filter = "MP3 Files|*.mp3|OGG Files|*.ogg|WAV Files|*.wav";
@@ -406,7 +430,7 @@ namespace Oh_gee_CD
                 }
 
                 ImGui.SameLine();
-                if (ImGui.Button("Test Sound##Custom" + action.Name))
+                if (ImGui.Button("Test Sound##Custom" + action.RecastGroup))
                 {
                     SoundEvent?.Invoke(null, new SoundEventArgs(null, null, action.SoundPath) { ForceSound = true });
                 }
@@ -416,7 +440,7 @@ namespace Oh_gee_CD
             {
                 double earlyCallout = action.EarlyCallout;
                 ImGui.SetNextItemWidth(150);
-                if (ImGui.InputDouble("Early Callout##" + action.Name, ref earlyCallout, 0.1, 0.1, "%.1f s"))
+                if (ImGui.InputDouble("Early Callout##" + action.RecastGroup, ref earlyCallout, 0.1, 0.1, "%.1f s"))
                 {
                     if (earlyCallout < 0) earlyCallout = 0;
                     if (earlyCallout > action.Recast.TotalSeconds) earlyCallout = action.Recast.TotalSeconds;
@@ -427,9 +451,9 @@ namespace Oh_gee_CD
 
             if (action.DrawOnOGCDBar)
             {
-                if (ImGui.BeginCombo("OGCD Bar##" + action.Name, action.OGCDBarId == 0 ? "None" : manager.OGCDBars.Single(a => a.Id == action.OGCDBarId).Name))
+                if (ImGui.BeginCombo("OGCD Bar##" + action.RecastGroup, action.OGCDBarId == 0 ? "None" : manager.OGCDBars.Single(a => a.Id == action.OGCDBarId).Name))
                 {
-                    if (ImGui.Selectable("None##" + action.Name, action.OGCDBarId == 0))
+                    if (ImGui.Selectable("None##" + action.RecastGroup, action.OGCDBarId == 0))
                     {
                         action.OGCDBarId = 0;
                     }
@@ -462,6 +486,7 @@ namespace Oh_gee_CD
 
         public void Dispose()
         {
+            manager.SoundManager.UnregisterSoundSource(this);
             system.RemoveWindow(this);
         }
     }

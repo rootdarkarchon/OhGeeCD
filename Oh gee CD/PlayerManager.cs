@@ -2,7 +2,6 @@
 using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Conditions;
-using Dalamud.Hooking;
 using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using FFXIVClientStructs;
@@ -13,6 +12,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Oh_gee_CD
@@ -29,27 +29,31 @@ namespace Oh_gee_CD
 
         public bool CutsceneActive => condition[ConditionFlag.OccupiedInCutSceneEvent] || condition[ConditionFlag.WatchingCutscene78];
         public bool InCombat => condition[ConditionFlag.InCombat];
-
+        public bool InDuty => condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56] || condition[ConditionFlag.BoundByDuty95] || condition[ConditionFlag.BoundToDuty97];
 
         [JsonProperty]
         public SoundManager SoundManager { get; init; }
         [JsonProperty]
         public bool HideOutOfCombat { get; set; } = true;
+        [JsonProperty]
+        public bool HideOutOfDuty { get; set; } = false;
         public List<Job> Jobs { get; set; } = new();
         public List<OGCDBar> OGCDBars { get; set; } = new();
         private string lastJob = string.Empty;
+        private CancellationTokenSource cts = new();
 
-        public delegate byte UseActionDelegate(ActionManager* actionManager, uint actionType, uint actionID, long targetObjectID, uint param, uint useType, int pvp, bool* isGroundTarget);
-        public byte UseActionDetour(ActionManager* actionManager, uint actionType, uint actionID, long targetObjectID, uint param, uint useType, int pvp, bool* isGroundTarget)
-            => OnUseAction(actionManager, actionType, actionID, targetObjectID, param, useType, pvp, isGroundTarget);
-
+        /// <summary>
+        /// Serialization constructor
+        /// </summary>
         public PlayerManager()
         {
             this.framework = null!;
             this.dataManager = null!;
             this.clientState = null!;
             this.SoundManager = null!;
-            UseActionHook = null!;
+            this.condition = null!;
+            this.system = null!;
+            this.helper = null!;
         }
 
         public PlayerManager(Framework framework, DataManager dataManager, ClientState clientState, SoundManager soundManager, WindowSystem system, DrawHelper helper,
@@ -62,7 +66,7 @@ namespace Oh_gee_CD
             this.system = system;
             this.helper = helper;
             this.condition = condition;
-            UseActionHook = new Hook<UseActionDelegate>((IntPtr)ActionManager.fpUseAction, UseActionDetour);
+            cts = new();
         }
 
 
@@ -82,43 +86,14 @@ namespace Oh_gee_CD
             {
                 if (job.Abbreviation == lastJob || job.ParentAbbreviation == lastJob)
                 {
-                    job.MakeActive();
                     job.SetLevel(clientState.LocalPlayer.Level);
+                    job.MakeActive();
                 }
                 else
                 {
                     job.MakeInactive();
                 }
             }
-        }
-
-        [NonSerialized]
-        public Hook<UseActionDelegate> UseActionHook;
-        private DateTime lastExecutedAction = DateTime.Now;
-
-        public byte OnUseAction(ActionManager* actionManager, uint actionType, uint actionID, long targetObjectID, uint param, uint useType, int pvp, bool* isGroundTarget)
-        {
-            var ret = UseActionHook.Original(actionManager, actionType, actionID, targetObjectID, param, useType, pvp, isGroundTarget);
-            if (ret == 0) return ret;
-            if (DateTime.Now - lastExecutedAction < TimeSpan.FromSeconds(0.5)) return ret;
-            lastExecutedAction = DateTime.Now;
-
-            Task.Run(() =>
-            {
-                uint adjustedActionId = actionManager->GetAdjustedActionId(actionID);
-
-                var action = Jobs.FirstOrDefault(j => j.IsActive)?.Actions.FirstOrDefault(a => a.Id == adjustedActionId);
-                if (action != null)
-                {
-                    action.StartCountdown(actionManager);
-                    foreach(var associatedAction in Jobs.FirstOrDefault(j => j.IsActive)?.Actions?.Where(a => a.CooldownGroup == action.CooldownGroup && a.Id != action.Id))
-                    {
-                        associatedAction.StartCountdown(actionManager, false);
-                    }
-                }
-            });
-
-            return ret;
         }
 
         public void Initialize(OhGeeCDConfiguration configuration)
@@ -156,33 +131,121 @@ namespace Oh_gee_CD
                 if (action == null || action.IsPvP) continue;
                 foreach (var job in Jobs)
                 {
-                    if (action.ClassJob.Value != null || action.ClassJobCategory.Value.Name.RawString.Contains(job.Abbreviation))
+                    if (action.ClassJob?.Value != null || action.ClassJobCategory.Value.Name.RawString.Contains(job.Abbreviation))
                     {
                         var abbr = action.ClassJob?.Value?.Abbreviation;
-                        if ((abbr?.RawString == job.Abbreviation || (abbr?.RawString == job.ParentAbbreviation && job.ParentAbbreviation != null)
+                        if ((abbr?.RawString == job.Abbreviation
+                            || (abbr?.RawString == job.ParentAbbreviation && job.ParentAbbreviation != null)
                             || (action.ClassJobCategory.Value.Name.RawString.Contains(job.Abbreviation) && action.IsRoleAction))
-                            && action.ActionCategory.Value.Name == "Ability" && action.ClassJobLevel > 0)
+                            && action.ActionCategory.Value.Name == "Ability"
+                            && action.ClassJobLevel > 0)
                         {
-                            OGCDAction ogcdaction = new OGCDAction(i, action.Icon, action.Name.RawString, TimeSpan.FromSeconds(action.Recast100ms / 10), action.CooldownGroup, action.ClassJobLevel, job.Level);
-                            SoundManager.RegisterSoundSource(ogcdaction);
-                            job.Actions.Add(ogcdaction);
+                            var potentialJobAction = job.Actions.FirstOrDefault(a => a.RecastGroup == action.CooldownGroup - 1);
+                            if (potentialJobAction != null)
+                            {
+                                potentialJobAction.Abilities.Add(new OGCDAbility(i, action.Icon, action.Name.RawString, action.ClassJobLevel, job.Level, action.IsRoleAction));
+                            }
+                            else
+                            {
+                                OGCDAction ogcdaction = new OGCDAction(new OGCDAbility(i, action.Icon, action.Name.RawString, action.ClassJobLevel, job.Level, action.IsRoleAction),
+                                    TimeSpan.FromSeconds(action.Recast100ms / 10), (byte)(action.CooldownGroup - 1), job.Level);
+                                SoundManager.RegisterSoundSource(ogcdaction);
+                                job.Actions.Add(ogcdaction);
+                            }
                         }
                     }
-                    job.Actions = job.Actions.OrderBy(a => a.RequiredJobLevel).ToList();
+
+                }
+            }
+
+            var managerInstance = ActionManager.Instance();
+            foreach (var job in Jobs)
+            {
+                PluginLog.Debug("Adjusting existing actions for " + job.Abbreviation);
+
+                foreach (var jobaction in job.Actions)
+                {
+                    foreach (var ability in jobaction.Abilities)
+                    {
+                        if (ability.OtherId != null) continue;
+                        if (ability.IsRoleAction)
+                        {
+                            ability.OtherId = null;
+                            continue;
+                        }
+
+                        var adjustedActionId = managerInstance->GetAdjustedActionId(ability.Id);
+                        if (adjustedActionId != ability.Id)
+                        {
+                            var otherAbility = job.Actions.SelectMany(j => j.Abilities).Single(a => a.Id == adjustedActionId);
+                            ability.OtherId = otherAbility;
+                            otherAbility.OtherId = ability;
+                            PluginLog.Debug(ability.Name + ":" + otherAbility.Name);
+                        }
+                    }
                 }
             }
 
             RestoreDataFromConfiguration(configuration);
 
-            SpawnBars();
-
             framework.Update += Framework_Update;
-            UseActionHook.Enable();
+            clientState.TerritoryChanged += ClientState_TerritoryChanged;
 
             foreach (var job in Jobs)
             {
-                job.Debug();
+                //job.Debug();
             }
+
+            cts = new CancellationTokenSource();
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    PluginLog.Debug("Starting checks for cast abilities");
+                    var actionManager = ActionManager.Instance();
+                    Job? activeJob = null;
+                    while (!cts.IsCancellationRequested)
+                    {
+                        activeJob = Jobs.SingleOrDefault(j => j.IsActive);
+                        if (activeJob != null)
+                        {
+                            foreach (var action in activeJob.Actions.Where(a => (a.DrawOnOGCDBar || a.TextToSpeechEnabled || a.SoundEffectEnabled)
+                                && a.Abilities.Any(ab => ab.IsAvailable)))
+                            {
+                                var groupDetail = actionManager->GetRecastGroupDetail(action.RecastGroup);
+                                if (groupDetail->IsActive != 0)
+                                {
+                                    action.StartCountdown(actionManager);
+                                }
+                            }
+                        }
+
+                        // slow down update rate while not in combat
+                        if (!InDuty && !InCombat)
+                        {
+                            Thread.Sleep(5000);
+                        }
+                        else
+                        {
+                            Thread.Sleep(500);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    PluginLog.Error(ex.ToString());
+                }
+            }, cts.Token);
+        }
+
+        private void ClientState_TerritoryChanged(object? sender, ushort e)
+        {
+            Task.Run(() =>
+            {
+                Thread.Sleep(5000);
+                UpdateJobs();
+            });
         }
 
         private void SpawnBars()
@@ -197,12 +260,13 @@ namespace Oh_gee_CD
 
         private void RestoreDataFromConfiguration(OhGeeCDConfiguration configuration)
         {
+            PluginLog.Debug("Restoring configuration");
             foreach (var job in configuration.LoadedPlayerManager.Jobs)
             {
                 var initJob = Jobs.First(j => j.Abbreviation == job.Abbreviation);
                 foreach (var action in initJob.Actions)
                 {
-                    var fittingActionFromConfig = job.Actions.FirstOrDefault(a => a.Id == action.Id);
+                    var fittingActionFromConfig = job.Actions.FirstOrDefault(a => a.RecastGroup == action.RecastGroup);
                     if (fittingActionFromConfig != null)
                         action.UpdateValuesFromOtherAction(fittingActionFromConfig);
                 }
@@ -210,7 +274,7 @@ namespace Oh_gee_CD
 
             foreach (var bar in configuration.LoadedPlayerManager.OGCDBars)
             {
-                OGCDBars.Add(bar);
+                AddOGCDBar((OGCDBar)bar.Clone());
             }
 
             HideOutOfCombat = configuration.LoadedPlayerManager.HideOutOfCombat;
@@ -236,25 +300,31 @@ namespace Oh_gee_CD
             return barID;
         }
 
-
         public void Dispose()
         {
+            try
+            {
+                cts?.Cancel();
+            }
+            catch { }
+
             foreach (var job in Jobs)
             {
                 job.Dispose();
                 foreach (var action in job.Actions)
                 {
-                    SoundManager.UnregisterSoundSource(action);
+                    SoundManager?.UnregisterSoundSource(action);
                 }
             }
 
             foreach (var bar in OGCDBars)
             {
+                PluginLog.Debug($"Disposing {bar.Name}, UI:{bar.UI != null}");
                 bar.Dispose();
             }
 
-            UseActionHook?.Dispose();
-            framework.Update -= Framework_Update;
+            if (framework != null)
+                framework.Update -= Framework_Update;
         }
     }
 }

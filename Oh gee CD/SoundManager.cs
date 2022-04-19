@@ -1,4 +1,5 @@
-﻿using Dalamud.Utility.Signatures;
+﻿using Dalamud.Logging;
+using Dalamud.Utility.Signatures;
 using NAudio.Wave;
 using Newtonsoft.Json;
 using System;
@@ -69,6 +70,8 @@ namespace Oh_gee_CD
         private void SoundEventTriggered(object? sender, SoundEventArgs e)
         {
             if (playerManager.CutsceneActive || (!playerManager.InCombat && playerManager.HideOutOfCombat && !e.ForceSound)) return;
+
+            PluginLog.Debug("Playing " + e);
 
             Task.Run(() =>
             {

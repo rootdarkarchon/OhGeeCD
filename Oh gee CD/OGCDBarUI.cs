@@ -1,5 +1,6 @@
 ﻿using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
+using Dalamud.Logging;
 using ImGuiNET;
 using System;
 using System.Linq;
@@ -21,7 +22,10 @@ namespace Oh_gee_CD
             this.playerManager = playerManager;
             this.drawHelper = drawHelper;
             system.AddWindow(this);
-            this.Toggle();
+            if (!this.IsOpen)
+            {
+                this.Toggle();
+            }
             Flags |= ImGuiWindowFlags.NoScrollbar;
             Flags |= ImGuiWindowFlags.NoTitleBar;
             Flags |= ImGuiWindowFlags.NoBackground;
@@ -49,12 +53,15 @@ namespace Oh_gee_CD
 
         public override void PostDraw()
         {
+
             if (bar.InEditMode)
             {
                 ImGui.PopStyleColor();
             }
             base.PostDraw();
         }
+
+        private const short DEFAULT_SIZE = 64;
 
         public override void Draw()
         {
@@ -76,11 +83,12 @@ namespace Oh_gee_CD
                 Flags |= ImGuiWindowFlags.NoMouseInputs;
             }
 
-            var jobActions = job.Actions.Where(j => j.OGCDBarId == bar.Id).ToArray();
+            var jobActions = job.Actions.Where(j => j.DrawOnOGCDBar && j.OGCDBarId == bar.Id && j.Abilities.Any(a => a.IsAvailable)).ToArray();
+            //PluginLog.Debug(string.Join(',', jobActions.Select(j => string.Join(';', j.Abilities.Select(a => a.ToString())))));
             int i = 0;
             int j = 0;
 
-            short iconSize = (short)(64 * bar.Scale);
+            short iconSize = (short)(DEFAULT_SIZE * bar.Scale);
 
             foreach (var action in jobActions)
             {
@@ -113,7 +121,8 @@ namespace Oh_gee_CD
             ImGui.PushClipRect(position, new Vector2(position.X + size * 2,
                 position.Y + size * 2), false);
 
-            drawHelper.DrawIconClipRect(drawList, action.Icon, position, new Vector2(position.X + size, position.Y + size));
+            OGCDAbility ability = action.Abilities.Where(a => a.IsAvailable).OrderByDescending(a => a.RequiredJobLevel).First();
+            drawHelper.DrawIconClipRect(drawList, ability.Icon, position, new Vector2(position.X + size, position.Y + size));
 
             if ((int)action.CooldownTimer > 0)
             {
@@ -124,15 +133,15 @@ namespace Oh_gee_CD
                     DrawHelper.Color(255, 255, 255, 200), 5, ImDrawFlags.RoundCornersAll);
             }
 
-            if (action.MaxStacks > 1)
+            if (action.MaxCharges > 1)
             {
-                string cooldownString = action.CurrentStacks.ToString("0");
+                string cooldownString = action.CurrentCharges.ToString("0");
 
-                ImGui.SetWindowFontScale(2.5f * size / 64.0f);
+                ImGui.SetWindowFontScale(2.5f * (size / (float)DEFAULT_SIZE));
 
                 var textSize = ImGui.CalcTextSize(cooldownString);
-                uint fontColorText = action.CurrentStacks > 0 ? DrawHelper.Color(255, 255, 255, 255) : DrawHelper.Color(255, 0, 0, 255);
-                uint fontColorOutline = action.CurrentStacks > 0 ? DrawHelper.Color(255, 0, 0, 255) : DrawHelper.Color(0, 0, 0, 255);
+                uint fontColorText = action.CurrentCharges > 0 ? DrawHelper.Color(255, 255, 255, 255) : DrawHelper.Color(255, 0, 0, 255);
+                uint fontColorOutline = action.CurrentCharges > 0 ? DrawHelper.Color(255, 0, 0, 255) : DrawHelper.Color(0, 0, 0, 255);
                 Vector2 cornerPos = new Vector2(position.X + size - textSize.X * 0.8f, position.Y + size - (textSize.Y * 0.7f));
 
                 int fontOffset = 2;
@@ -154,7 +163,7 @@ namespace Oh_gee_CD
             {
                 string cooldownString = action.CooldownTimer.ToString("0");
 
-                ImGui.SetWindowFontScale(2 * size / 64.0f);
+                ImGui.SetWindowFontScale(2 * (size / (float)DEFAULT_SIZE));
 
                 var textSize = ImGui.CalcTextSize(cooldownString);
                 uint fontColorText = DrawHelper.Color(255, 255, 255, 255);
@@ -182,7 +191,11 @@ namespace Oh_gee_CD
 
         public void Dispose()
         {
-            system.RemoveWindow(this);
+            try
+            {
+                system.RemoveWindow(this);
+            }
+            catch { }
         }
     }
 }

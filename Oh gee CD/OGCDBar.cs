@@ -4,7 +4,7 @@ using System;
 namespace Oh_gee_CD
 {
     [Serializable]
-    public class OGCDBar : IDisposable
+    public class OGCDBar : IDisposable, ICloneable
     {
         public OGCDBar(int id, string name)
         {
@@ -15,7 +15,6 @@ namespace Oh_gee_CD
             HorizontalPadding = 5;
             VerticalPadding = 5;
             MaxItemsHorizontal = 10;
-            Scale = 1.0;
             UI = null!;
         }
 
@@ -40,9 +39,14 @@ namespace Oh_gee_CD
         [JsonIgnore]
         public OGCDBarUI UI { get; set; }
 
+        public object Clone()
+        {
+            return MemberwiseClone();
+        }
+
         public void Dispose()
         {
-            if(UI != null)
+            if (UI != null)
             {
                 UI.Dispose();
             }

@@ -9,9 +9,8 @@
   "Description": "OGCD assistant providing Text To Speech, (Custom) Sound Effects and unlimited extra bars to visualize and alert you for your OGCDs.",
   "Changelog": null,
   "Tags": [
-    "ogcd",
-    "plugin",
-    "ui"
+    "jobs",
+    "utility"
   ],
   "CategoryTags": null,
   "IsHide": false,

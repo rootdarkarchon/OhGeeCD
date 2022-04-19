@@ -62,7 +62,7 @@ namespace Oh_gee_CD
         public void Debug()
         {
             PluginLog.Debug($"{Abbreviation} ({ParentAbbreviation}) Lvl {Level}");
-            foreach (var action in Actions.OrderBy(a => a.RequiredJobLevel))
+            foreach (var action in Actions)
             {
                 action.Debug();
             }
