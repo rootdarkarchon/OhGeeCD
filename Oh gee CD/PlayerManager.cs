@@ -325,6 +325,8 @@ namespace Oh_gee_CD
 
             if (framework != null)
                 framework.Update -= Framework_Update;
+            if(clientState != null)
+                clientState.TerritoryChanged -= ClientState_TerritoryChanged;
         }
     }
 }

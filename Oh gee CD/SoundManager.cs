@@ -18,7 +18,7 @@ namespace Oh_gee_CD
 
         [Signature("E8 ?? ?? ?? ?? 4D 39 BE ?? ?? ?? ??")]
         private readonly PlaySoundEffectDelegate PlayGameSoundEffect = null!;
-        private PlayerManager playerManager;
+        private PlayerManager? playerManager;
         private SpeechSynthesizer speechSynthesizer;
         [JsonProperty]
         public int TTSVolume { get; set; } = 100;
@@ -38,7 +38,7 @@ namespace Oh_gee_CD
             SignatureHelper.Initialise(this);
         }
 
-        public void SetVoice(string cultureInfo, SpeechSynthesizer synthesizer = null)
+        public void SetVoice(string cultureInfo, SpeechSynthesizer? synthesizer = null)
         {
             SelectedVoiceCulture = cultureInfo;
             if (synthesizer == null)
@@ -69,42 +69,41 @@ namespace Oh_gee_CD
 
         private void SoundEventTriggered(object? sender, SoundEventArgs e)
         {
-            if (playerManager.CutsceneActive || (!playerManager.InCombat && playerManager.HideOutOfCombat && !e.ForceSound)) return;
+            if ((playerManager?.CutsceneActive ?? false) 
+                || ((!playerManager?.InCombat ?? false) && (playerManager?.HideOutOfCombat ?? false) && !e.ForceSound)) return;
 
             PluginLog.Debug("Playing " + e);
 
-            Task.Run(() =>
-            {
-                if (e.SoundId > 0)
-                {
-                    PlaySoundEffect(e.SoundId);
-                }
+            _ = Task.Run(() =>
+              {
+                  if (e.SoundId > 0)
+                  {
+                      PlaySoundEffect(e.SoundId);
+                  }
 
-                if (!string.IsNullOrEmpty(e.TextToSpeech))
-                {
-                    var synth = new SpeechSynthesizer();
-                    synth.SetOutputToDefaultAudioDevice();
-                    SetVoice(SelectedVoiceCulture, synth);
-                    synth.Volume = TTSVolume;
-                    synth.Speak(e.TextToSpeech);
-                }
+                  if (!string.IsNullOrEmpty(e.TextToSpeech))
+                  {
+                      var synth = new SpeechSynthesizer();
+                      synth.SetOutputToDefaultAudioDevice();
+                      SetVoice(SelectedVoiceCulture, synth);
+                      synth.Volume = TTSVolume;
+                      synth.Speak(e.TextToSpeech);
+                  }
 
-                if (!string.IsNullOrEmpty(e.SoundPath))
-                {
-                    if (!File.Exists(e.SoundPath)) return;
+                  if (!string.IsNullOrEmpty(e.SoundPath))
+                  {
+                      if (!File.Exists(e.SoundPath)) return;
 
-                    using (var mf = new MediaFoundationReader(e.SoundPath))
-                    using (var wo = new WaveOutEvent())
-                    {
-                        wo.Init(mf);
-                        wo.Play();
-                        while (wo.PlaybackState == PlaybackState.Playing)
-                        {
-                            Thread.Sleep(200);
-                        }
-                    }
-                }
-            });
+                      using var mf = new MediaFoundationReader(e.SoundPath);
+                      using var wo = new WaveOutEvent();
+                      wo?.Init(mf);
+                      wo?.Play();
+                      while (wo?.PlaybackState == PlaybackState.Playing)
+                      {
+                          Thread.Sleep(200);
+                      }
+                  }
+              });
 
         }
 
