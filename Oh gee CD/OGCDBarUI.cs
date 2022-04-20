@@ -53,7 +53,6 @@ namespace Oh_gee_CD
 
         public override void PostDraw()
         {
-
             if (bar.InEditMode)
             {
                 ImGui.PopStyleColor();
@@ -65,7 +64,9 @@ namespace Oh_gee_CD
 
         public override void Draw()
         {
-            if (!IsOpen || playerManager.CutsceneActive || (playerManager.HideOutOfCombat && !playerManager.InCombat && !bar.InEditMode)) return;
+            bool show = playerManager.ProcessingActive();
+            show |= bar.InEditMode;
+            if (show == false || IsOpen == false) return;
 
             var job = playerManager.Jobs.SingleOrDefault(j => j.IsActive);
             if (job == null) return;

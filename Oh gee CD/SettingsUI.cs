@@ -214,11 +214,31 @@ namespace Oh_gee_CD
 
         private void DrawGeneralSettings()
         {
-            bool hideOutOfCombat = manager.HideOutOfCombat;
-            if (ImGui.Checkbox("Hide out of combat", ref hideOutOfCombat))
+            bool showAlways = manager.ShowAlways;
+            if (ImGui.Checkbox("Show always", ref showAlways))
             {
-                manager.HideOutOfCombat = hideOutOfCombat;
+                manager.ShowAlways = showAlways;
             }
+
+            DrawHelper.DrawHelpText("Will show the OGCDBars always and always play sounds");
+
+            bool showInCombat = manager.ShowInCombat;
+            if (ImGui.Checkbox("Show in combat", ref showInCombat))
+            {
+                manager.ShowInCombat = showInCombat;
+            }
+
+            DrawHelper.DrawHelpText("Will show the OGCDBars in combat and play sounds in combat");
+
+
+            bool showInDuty = manager.ShowInDuty;
+            if (ImGui.Checkbox("Show in duty", ref showInDuty))
+            {
+                manager.ShowInDuty = showInDuty;
+            }
+
+            DrawHelper.DrawHelpText("Will show the OGCDBars in duty and play sounds in duty");
+
 
             int textToSpeechVolume = manager.SoundManager.TTSVolume;
             if (ImGui.SliderInt("TTS Volume##", ref textToSpeechVolume, 0, 100))

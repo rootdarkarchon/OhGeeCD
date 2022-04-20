@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 namespace Oh_gee_CD
 {
     [Serializable]
-    public unsafe class PlayerManager : IDisposable
+    public class PlayerManager : IDisposable
     {
         private readonly Framework framework;
         private readonly DataManager dataManager;
@@ -34,14 +34,26 @@ namespace Oh_gee_CD
         [JsonProperty]
         public SoundManager SoundManager { get; init; }
         [JsonProperty]
-        public bool HideOutOfCombat { get; set; } = true;
+        public bool ShowInCombat { get; set; } = true;
         [JsonProperty]
-        public bool HideOutOfDuty { get; set; } = false;
+        public bool ShowAlways { get; set; } = false;
+        [JsonProperty]
+        public bool ShowInDuty { get; set; } = false;
         public List<Job> Jobs { get; set; } = new();
         public List<OGCDBar> OGCDBars { get; set; } = new();
         private string lastJob = string.Empty;
         private uint lastLevel = 0;
         private CancellationTokenSource cts = new();
+
+        public bool ProcessingActive()
+        {
+            bool show = false;
+            show |= ShowAlways;
+            show |= ShowInCombat && InCombat;
+            show |= ShowInDuty && InDuty;
+            show &= !CutsceneActive;
+            return show;
+        }
 
         /// <summary>
         /// Serialization constructor
@@ -98,7 +110,7 @@ namespace Oh_gee_CD
             }
         }
 
-        public void Initialize(OhGeeCDConfiguration configuration)
+        public unsafe void Initialize(OhGeeCDConfiguration configuration)
         {
             Resolver.Initialize();
             var levels = UIState.Instance()->PlayerState.ClassJobLevelArray;
@@ -200,7 +212,7 @@ namespace Oh_gee_CD
 
             cts = new CancellationTokenSource();
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 try
                 {
@@ -223,10 +235,15 @@ namespace Oh_gee_CD
                             }
                         }
 
-                        // slow down update rate while not in combat
-                        if (!InDuty && !InCombat)
+                        // slow down update rate while inactive
+                        if (!ProcessingActive())
                         {
-                            Thread.Sleep(5000);
+                            int sleepTime = 10;
+                            while(sleepTime > 0 && !ProcessingActive())
+                            {
+                                Thread.Sleep(500);
+                                sleepTime--;
+                            }
                         }
                         else
                         {
@@ -279,7 +296,7 @@ namespace Oh_gee_CD
                 AddOGCDBar((OGCDBar)bar.Clone());
             }
 
-            HideOutOfCombat = configuration.LoadedPlayerManager.HideOutOfCombat;
+            ShowInCombat = configuration.LoadedPlayerManager.ShowInCombat;
 
             var ttsVolume = configuration.LoadedPlayerManager.SoundManager?.TTSVolume;
             PluginLog.Debug("TTS Volume: " + ttsVolume);

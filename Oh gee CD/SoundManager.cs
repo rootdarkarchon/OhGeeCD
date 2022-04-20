@@ -36,6 +36,7 @@ namespace Oh_gee_CD
             AvailableVoices = speechSynthesizer.GetInstalledVoices();
             SetVoice(SelectedVoiceCulture);
             SignatureHelper.Initialise(this);
+            playerManager = null!;
         }
 
         public void SetVoice(string cultureInfo, SpeechSynthesizer? synthesizer = null)
@@ -69,8 +70,7 @@ namespace Oh_gee_CD
 
         private void SoundEventTriggered(object? sender, SoundEventArgs e)
         {
-            if ((playerManager?.CutsceneActive ?? false) 
-                || ((!playerManager?.InCombat ?? false) && (playerManager?.HideOutOfCombat ?? false) && !e.ForceSound)) return;
+            if ((!playerManager?.ProcessingActive() ?? false) && !e.ForceSound) return;
 
             PluginLog.Debug("Playing " + e);
 
