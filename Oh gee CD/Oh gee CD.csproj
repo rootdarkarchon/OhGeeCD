@@ -60,7 +60,7 @@
 
   <ItemGroup>
     <None Update="Oh gee CD.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="ohgeecd.png">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>

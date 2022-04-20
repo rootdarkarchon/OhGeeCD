@@ -40,6 +40,7 @@ namespace Oh_gee_CD
         public List<Job> Jobs { get; set; } = new();
         public List<OGCDBar> OGCDBars { get; set; } = new();
         private string lastJob = string.Empty;
+        private uint lastLevel = 0;
         private CancellationTokenSource cts = new();
 
         /// <summary>
@@ -73,8 +74,9 @@ namespace Oh_gee_CD
         private void Framework_Update(Framework framework)
         {
             if (clientState.LocalPlayer?.ClassJob?.GameData == null) return;
-            if (lastJob != clientState.LocalPlayer.ClassJob.GameData.Abbreviation)
+            if (lastJob != clientState.LocalPlayer.ClassJob.GameData.Abbreviation || lastLevel != clientState.LocalPlayer.Level)
             {
+                lastLevel = clientState.LocalPlayer.Level;
                 lastJob = clientState.LocalPlayer.ClassJob.GameData.Abbreviation;
                 UpdateJobs();
             }
@@ -86,7 +88,7 @@ namespace Oh_gee_CD
             {
                 if (job.Abbreviation == lastJob || job.ParentAbbreviation == lastJob)
                 {
-                    job.SetLevel(clientState.LocalPlayer.Level);
+                    job.SetLevel(lastLevel);
                     job.MakeActive();
                 }
                 else

@@ -22,9 +22,9 @@ namespace Oh_gee_CD
             this.playerManager = playerManager;
             this.drawHelper = drawHelper;
             system.AddWindow(this);
-            if (!this.IsOpen)
+            if (!IsOpen)
             {
-                this.Toggle();
+                Toggle();
             }
             Flags |= ImGuiWindowFlags.NoScrollbar;
             Flags |= ImGuiWindowFlags.NoTitleBar;
@@ -83,7 +83,7 @@ namespace Oh_gee_CD
                 Flags |= ImGuiWindowFlags.NoMouseInputs;
             }
 
-            var jobActions = job.Actions.Where(j => j.DrawOnOGCDBar && j.OGCDBarId == bar.Id && j.Abilities.Any(a => a.IsAvailable)).ToArray();
+            var jobActions = job.Actions.Where(j => j.OGCDBarId == bar.Id && j.DrawOnOGCDBar && j.Abilities.Any(a => a.IsAvailable)).ToArray();
             //PluginLog.Debug(string.Join(',', jobActions.Select(j => string.Join(';', j.Abilities.Select(a => a.ToString())))));
             int i = 0;
             int j = 0;
@@ -121,8 +121,9 @@ namespace Oh_gee_CD
             ImGui.PushClipRect(position, new Vector2(position.X + size * 2,
                 position.Y + size * 2), false);
 
-            OGCDAbility ability = action.Abilities.Where(a => a.IsAvailable).OrderByDescending(a => a.RequiredJobLevel).First();
-            drawHelper.DrawIconClipRect(drawList, ability.Icon, position, new Vector2(position.X + size, position.Y + size));
+            var iconToDraw = action.IconToDraw != 0 && action.Abilities.Single(a => a.Icon == action.IconToDraw).IsAvailable
+                ? action.IconToDraw : action.Abilities.Where(a => a.IsAvailable).OrderByDescending(a => a.RequiredJobLevel).First().Icon;
+            drawHelper.DrawIconClipRect(drawList, iconToDraw, position, new Vector2(position.X + size, position.Y + size));
 
             if ((int)action.CooldownTimer > 0)
             {

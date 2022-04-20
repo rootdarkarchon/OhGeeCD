@@ -1,4 +1,5 @@
 ﻿using Dalamud.Interface.Windowing;
+using Dalamud.Logging;
 using ImGuiNET;
 using System;
 using System.Linq;
@@ -77,12 +78,14 @@ namespace Oh_gee_CD
             {
                 if (selectedOGCDIndex < 0) return;
                 var removedOGCDBarId = manager.OGCDBars[selectedOGCDIndex].Id;
-                manager.RemoveOGCDBar(manager.OGCDBars[selectedOGCDIndex]);
                 foreach (var job in manager.Jobs.SelectMany(j => j.Actions))
                 {
                     if (job.OGCDBarId == removedOGCDBarId) job.OGCDBarId = 0;
                 }
+                manager.RemoveOGCDBar(manager.OGCDBars[selectedOGCDIndex]);
                 if (manager.OGCDBars.Count == 0) selectedOGCDIndex = -1;
+                else
+                    selectedOGCDIndex--;
             }
 
 
@@ -198,7 +201,7 @@ namespace Oh_gee_CD
                 {
                     if (action.DrawOnOGCDBar && action.OGCDBarId == bar.Id)
                     {
-                        foreach(var ability in action.Abilities)
+                        foreach (var ability in action.Abilities)
                         {
                             ImGui.Text($"{job.Abbreviation}: {ability.Name}");
                         }
@@ -451,6 +454,28 @@ namespace Oh_gee_CD
 
             if (action.DrawOnOGCDBar)
             {
+                if (action.Abilities.Count > 1)
+                {
+                    string abilityName = action.IconToDraw == 0 ? action.Abilities[0].Name : action.Abilities.SingleOrDefault(a => a.Icon == action.IconToDraw)?.Name ?? action.Abilities[0].Name;
+                    if (ImGui.BeginCombo("Icon to Draw##" + action.RecastGroup, abilityName))
+                    {
+                        foreach (var ability in action.Abilities)
+                        {
+                            if (ImGui.Selectable(ability.Name + "##" + action.RecastGroup, ability.Name == abilityName))
+                            {
+                                action.IconToDraw = ability.Icon;
+                            }
+
+                            if (ability.Name == abilityName)
+                            {
+                                ImGui.SetItemDefaultFocus();
+                            }
+                        }
+
+                        ImGui.EndCombo();
+                    }
+                }
+
                 if (ImGui.BeginCombo("OGCD Bar##" + action.RecastGroup, action.OGCDBarId == 0 ? "None" : manager.OGCDBars.Single(a => a.Id == action.OGCDBarId).Name))
                 {
                     if (ImGui.Selectable("None##" + action.RecastGroup, action.OGCDBarId == 0))

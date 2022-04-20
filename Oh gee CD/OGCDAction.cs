@@ -12,6 +12,8 @@ namespace Oh_gee_CD
     [Serializable]
     public class OGCDAction : IDisposable, ISoundSource
     {
+        [JsonProperty]
+        public byte RecastGroup { get; set; }
         public List<OGCDAbility> Abilities { get; set; } = new();
         [JsonProperty]
         public int OGCDBarId { get; set; } = 0;
@@ -29,7 +31,7 @@ namespace Oh_gee_CD
         [JsonProperty]
         public string SoundPath { get; set; } = string.Empty;
         [JsonProperty]
-        public byte RecastGroup { get; set; }
+        public uint IconToDraw { get; set; } = 0;
 
         [JsonIgnore]
         public TimeSpan Recast { get; set; }
@@ -37,8 +39,6 @@ namespace Oh_gee_CD
         public short MaxCharges { get; private set; }
         [JsonIgnore]
         public short CurrentCharges { get; private set; }
-        [JsonIgnore]
-        public bool IsCurrentClassJob { get; private set; }
         [JsonIgnore]
         public double CooldownTimer { get; private set; }
         private uint currentJobLevel;
@@ -55,12 +55,12 @@ namespace Oh_gee_CD
             cts = null!;
         }
 
-        public OGCDAction(OGCDAbility ability, TimeSpan recast, byte cooldownGroup, uint currentJobLevel)
+        public OGCDAction(OGCDAbility ability, TimeSpan recast, byte recastGroup, uint currentJobLevel)
         {
             Abilities.Add(ability);
             Recast = recast;
             TextToSpeechName = ability.Name;
-            RecastGroup = cooldownGroup;
+            RecastGroup = recastGroup;
             this.currentJobLevel = currentJobLevel;
             MaxCharges = (short)ActionManager.GetMaxCharges(ability.Id, currentJobLevel);
             CurrentCharges = MaxCharges;
@@ -83,22 +83,26 @@ namespace Oh_gee_CD
         private bool timerRunning = false;
         private int soundQueue = 1;
 
-        public unsafe void StartCountdown(ActionManager* actionManager, bool playSound = true)
+        public unsafe void StartCountdown(ActionManager* actionManager)
         {
             if (timerRunning)
             {
-                PluginLog.Debug("Running:" + RecastGroup + ":" + CurrentCharges + "/" + MaxCharges);
+                //PluginLog.Debug("Running:" + RecastGroup + ":" + CurrentCharges + "/" + MaxCharges);
                 return;
             }
             cts = new CancellationTokenSource();
             Task.Run(() =>
             {
+                timerRunning = true;
+                // wait and see if it actually needs to run, ffxiv has the tendency to somehow 
+                // just set the ability to active just to make it inactive just a second or so later
+                Thread.Sleep(1000);
+
                 var detail = actionManager->GetRecastGroupDetail(RecastGroup);
                 CurrentCharges = (short)Math.Floor(detail->Elapsed / Recast.TotalSeconds);
-                Thread.Sleep(1000);
                 if (CurrentCharges == MaxCharges || detail->IsActive != 1) return;
 
-                soundQueue = playSound ? 1 : 0;
+                soundQueue = 1;
                 timerRunning = true;
                 CooldownTimer = 0;
                 bool earlyCallOutReset = true;
@@ -110,26 +114,29 @@ namespace Oh_gee_CD
 
                     var curTimeElapsed = detail->Elapsed;
 
-                    earlyCallOutReset = earlyCallOutReset || CooldownTimer < ((Recast.TotalSeconds * MaxCharges - curTimeElapsed) % Recast.TotalSeconds);
-                    CooldownTimer = ((Recast.TotalSeconds * MaxCharges - curTimeElapsed) % Recast.TotalSeconds);
+                    // reset early callout if the CooldownTimer is suddenly smaller than the new CooldownTimer 
+                    var newCoolDown = ((Recast.TotalSeconds * MaxCharges - curTimeElapsed) % Recast.TotalSeconds);
+                    earlyCallOutReset = earlyCallOutReset || CooldownTimer < newCoolDown;
+                    //PluginLog.Debug("CalloutReset:" + earlyCallOutReset);
+                    CooldownTimer = newCoolDown;
 
-                    var stacks = (short)Math.Floor(detail->Elapsed / Recast.TotalSeconds);
+                    var newCharges = (short)Math.Floor(detail->Elapsed / Recast.TotalSeconds);
 
-                    if (stacks < CurrentCharges)
+                    if (newCharges < CurrentCharges)
                     {
                         soundQueue++;
+                        PluginLog.Debug(RecastGroup + ":NewCharges|" + newCharges + ":CurrentCharges|" + CurrentCharges);
                     }
 
-                    if (IsCurrentClassJob
-                        && ((soundQueue > 1 && stacks > CurrentCharges && EarlyCallout == 0.0)
-                           || (CooldownTimer <= EarlyCallout && soundQueue >= 1 && earlyCallOutReset)))
+                    if ((soundQueue > 1 && newCharges > CurrentCharges && EarlyCallout == 0.0) // if we have more charges than we had in the prior loop, we need to notify
+                           || (CooldownTimer <= EarlyCallout && soundQueue >= 1 && earlyCallOutReset)) // if the timer is below early callout and we have a sound queue of greater equal 1 we also need to notify
                     {
                         PlaySound();
                         if (CooldownTimer <= EarlyCallout && soundQueue >= 1 && earlyCallOutReset) earlyCallOutReset = false;
                         if (soundQueue > 0) soundQueue--;
                     }
 
-                    CurrentCharges = stacks;
+                    CurrentCharges = newCharges;
 
                     Thread.Sleep(100);
                     if (cts.IsCancellationRequested)
@@ -141,8 +148,8 @@ namespace Oh_gee_CD
                 } while (detail->IsActive == 1 && !cancelled && CurrentCharges != MaxCharges);
 
                 CurrentCharges = MaxCharges;
-                PluginLog.Debug("Ending:" + RecastGroup + ":" + CurrentCharges + "/" + MaxCharges + ":Cancel|" + cancelled);
-                if (IsCurrentClassJob && soundQueue == 1 && !cancelled)
+                PluginLog.Debug("Ending:" + RecastGroup + ":" + CurrentCharges + "/" + MaxCharges + ":Cancel|" + cancelled + "|Queue:" + soundQueue);
+                if (soundQueue == 1 && !cancelled)
                 {
                     PlaySound();
                 }
@@ -161,20 +168,17 @@ namespace Oh_gee_CD
 
         public void Dispose()
         {
-            IsCurrentClassJob = false;
             cts?.Cancel();
         }
 
         public void MakeInactive()
         {
-            IsCurrentClassJob = false;
             cts?.Cancel();
             cts = new CancellationTokenSource();
         }
 
         public void MakeActive(uint currentJobLevel)
         {
-            IsCurrentClassJob = true;
             this.currentJobLevel = currentJobLevel;
             MaxCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, currentJobLevel);
             CurrentCharges = MaxCharges;
@@ -195,6 +199,7 @@ namespace Oh_gee_CD
             TextToSpeechEnabled = fittingActionFromConfig.TextToSpeechEnabled;
             EarlyCallout = fittingActionFromConfig.EarlyCallout;
             SoundPath = fittingActionFromConfig.SoundPath;
+            IconToDraw = fittingActionFromConfig.IconToDraw;
         }
     }
 }
