@@ -82,9 +82,15 @@ namespace Oh_gee_CD
             cts = new();
         }
 
-
+        private int frameworkLoop = 0;
         private void Framework_Update(Framework framework)
         {
+            if (frameworkLoop < 100)
+            {
+                frameworkLoop++;
+                return;
+            }
+            frameworkLoop = 0;
             if (clientState.LocalPlayer?.ClassJob?.GameData == null) return;
             if (lastJob != clientState.LocalPlayer.ClassJob.GameData.Abbreviation || lastLevel != clientState.LocalPlayer.Level)
             {
@@ -212,50 +218,50 @@ namespace Oh_gee_CD
 
             cts = new CancellationTokenSource();
 
-            Task.Run(async () =>
-            {
-                try
-                {
-                    PluginLog.Debug("Starting checks for cast abilities");
-                    var actionManager = ActionManager.Instance();
-                    Job? activeJob = null;
-                    while (!cts.IsCancellationRequested)
-                    {
-                        activeJob = Jobs.SingleOrDefault(j => j.IsActive);
-                        if (activeJob != null)
-                        {
-                            foreach (var action in activeJob.Actions.Where(a => (a.DrawOnOGCDBar || a.TextToSpeechEnabled || a.SoundEffectEnabled)
-                                && a.Abilities.Any(ab => ab.IsAvailable)))
-                            {
-                                var groupDetail = actionManager->GetRecastGroupDetail(action.RecastGroup);
-                                if (groupDetail->IsActive != 0)
-                                {
-                                    action.StartCountdown(actionManager);
-                                }
-                            }
-                        }
+            Task.Run(() =>
+           {
+               try
+               {
+                   PluginLog.Debug("Starting checks for cast abilities");
+                   var actionManager = ActionManager.Instance();
+                   Job? activeJob = null;
+                   while (!cts.IsCancellationRequested)
+                   {
+                       activeJob = Jobs.SingleOrDefault(j => j.IsActive);
+                       if (activeJob != null)
+                       {
+                           foreach (var action in activeJob.Actions.Where(a => (a.DrawOnOGCDBar || a.TextToSpeechEnabled || a.SoundEffectEnabled)
+                               && a.Abilities.Any(ab => ab.IsAvailable)))
+                           {
+                               var groupDetail = actionManager->GetRecastGroupDetail(action.RecastGroup);
+                               if (groupDetail->IsActive != 0)
+                               {
+                                   action.StartCountdown(actionManager);
+                               }
+                           }
+                       }
 
                         // slow down update rate while inactive
                         if (!ProcessingActive())
-                        {
-                            int sleepTime = 10;
-                            while(sleepTime > 0 && !ProcessingActive())
-                            {
-                                Thread.Sleep(500);
-                                sleepTime--;
-                            }
-                        }
-                        else
-                        {
-                            Thread.Sleep(500);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    PluginLog.Error(ex.ToString());
-                }
-            }, cts.Token);
+                       {
+                           int sleepTime = 10;
+                           while (sleepTime > 0 && !ProcessingActive())
+                           {
+                               Thread.Sleep(500);
+                               sleepTime--;
+                           }
+                       }
+                       else
+                       {
+                           Thread.Sleep(500);
+                       }
+                   }
+               }
+               catch (Exception ex)
+               {
+                   PluginLog.Error(ex.ToString());
+               }
+           }, cts.Token);
         }
 
         private void ClientState_TerritoryChanged(object? sender, ushort e)
@@ -297,6 +303,8 @@ namespace Oh_gee_CD
             }
 
             ShowInCombat = configuration.LoadedPlayerManager.ShowInCombat;
+            ShowAlways = configuration.LoadedPlayerManager.ShowAlways;
+            ShowInDuty = configuration.LoadedPlayerManager.ShowInDuty;
 
             var ttsVolume = configuration.LoadedPlayerManager.SoundManager?.TTSVolume;
             PluginLog.Debug("TTS Volume: " + ttsVolume);
@@ -344,7 +352,7 @@ namespace Oh_gee_CD
 
             if (framework != null)
                 framework.Update -= Framework_Update;
-            if(clientState != null)
+            if (clientState != null)
                 clientState.TerritoryChanged -= ClientState_TerritoryChanged;
         }
     }
