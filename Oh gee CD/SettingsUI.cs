@@ -307,10 +307,10 @@ namespace Oh_gee_CD
                     ImGui.SameLine();
                 }
                 drawHelper.DrawIcon(ability.Icon, new Vector2(24, 24));
-                if (ability.OtherId != null && ability.OtherId.IsAvailable)
+                if (ability.OtherAbility != null && ability.OtherAbility.IsAvailable)
                 {
                     ImGui.TextDisabled(ability.Name);
-                    DrawHelper.DrawHelpText($"This ability is overwritten by one of a higher level: {ability.OtherId.Name}");
+                    DrawHelper.DrawHelpText($"This ability is overwritten by one of a higher level: {ability.OtherAbility.Name}");
                 }
                 else
                 {

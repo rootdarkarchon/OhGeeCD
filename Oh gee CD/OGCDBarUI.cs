@@ -146,18 +146,9 @@ namespace Oh_gee_CD
                 uint fontColorOutline = action.CurrentCharges > 0 ? DrawHelper.Color(255, 0, 0, 255) : DrawHelper.Color(0, 0, 0, 255);
                 Vector2 cornerPos = new Vector2(position.X + size - textSize.X * 0.8f, position.Y + size - (textSize.Y * 0.7f));
 
-                int fontOffset = 2;
-                drawList.AddText(new Vector2(cornerPos.X, cornerPos.Y - fontOffset),
-                    fontColorOutline, cooldownString);
-                drawList.AddText(new Vector2(cornerPos.X - fontOffset, cornerPos.Y),
-                    fontColorOutline, cooldownString);
-                drawList.AddText(new Vector2(cornerPos.X, cornerPos.Y + fontOffset),
-                    fontColorOutline, cooldownString);
-                drawList.AddText(new Vector2(cornerPos.X + fontOffset, cornerPos.Y),
-                    fontColorOutline, cooldownString);
 
-                drawList.AddText(cornerPos, fontColorText, cooldownString);
-                drawList.AddText(cornerPos, fontColorText, cooldownString);
+                DrawOutlinedFont(drawList, cooldownString, cornerPos, fontColorText, fontColorOutline, 2);
+
                 ImGui.SetWindowFontScale(1);
             }
 
@@ -172,22 +163,35 @@ namespace Oh_gee_CD
                 uint fontColorOutline = DrawHelper.Color(0, 0, 0, 255);
                 Vector2 centerPos = new Vector2(position.X + size / 2 - textSize.X / 2, position.Y + size / 2 - textSize.Y / 2);
 
-                int fontOffset = 2;
-                drawList.AddText(new Vector2(centerPos.X, centerPos.Y - fontOffset),
-                    fontColorOutline, cooldownString);
-                drawList.AddText(new Vector2(centerPos.X - fontOffset, centerPos.Y),
-                    fontColorOutline, cooldownString);
-                drawList.AddText(new Vector2(centerPos.X, centerPos.Y + fontOffset),
-                    fontColorOutline, cooldownString);
-                drawList.AddText(new Vector2(centerPos.X + fontOffset, centerPos.Y),
-                    fontColorOutline, cooldownString);
+                DrawOutlinedFont(drawList, cooldownString, centerPos, fontColorText, fontColorOutline, 2);
 
-                drawList.AddText(centerPos, fontColorText, cooldownString);
-                drawList.AddText(centerPos, fontColorText, cooldownString);
                 ImGui.SetWindowFontScale(1);
             }
 
             drawList.PopClipRect();
+        }
+
+        private void DrawOutlinedFont(ImDrawListPtr drawList, string text, Vector2 textPos, uint fontColor, uint outlineColor, int thickness)
+        {
+            drawList.AddText(new Vector2(textPos.X, textPos.Y - thickness),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X - thickness, textPos.Y),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X, textPos.Y + thickness),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X + thickness, textPos.Y),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X, textPos.Y - thickness),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X - thickness, textPos.Y),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X, textPos.Y + thickness),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X + thickness, textPos.Y),
+                outlineColor, text);
+
+            drawList.AddText(textPos, fontColor, text);
+            drawList.AddText(textPos, fontColor, text);
         }
 
 

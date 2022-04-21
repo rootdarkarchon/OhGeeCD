@@ -82,21 +82,59 @@ namespace Oh_gee_CD
             cts = new();
         }
 
-        private int frameworkLoop = 0;
-        private void Framework_Update(Framework framework)
+        private DateTime lastFrameworkUpdate = DateTime.MinValue;
+        private DateTime lastCheckUpdate = DateTime.MinValue;
+        private bool initialized;
+
+        private unsafe void Framework_Update(Framework framework)
         {
-            if (frameworkLoop < 100)
+            // slow down update rate while inactive
+            bool triggerSlowUpdate = !ProcessingActive() && framework.LastUpdateUTC > lastCheckUpdate + TimeSpan.FromSeconds(5);
+            bool triggerFastUpdate = ProcessingActive() && framework.LastUpdateUTC > lastCheckUpdate + TimeSpan.FromMilliseconds(500);
+            bool triggerGeneralUpdate = framework.LastUpdateUTC > lastFrameworkUpdate + TimeSpan.FromSeconds(1);
+
+            if ((!triggerSlowUpdate && !triggerFastUpdate && !triggerGeneralUpdate) || initialized == false)
             {
-                frameworkLoop++;
                 return;
             }
-            frameworkLoop = 0;
+
+            lastFrameworkUpdate = framework.LastUpdateUTC;
+
             if (clientState.LocalPlayer?.ClassJob?.GameData == null) return;
             if (lastJob != clientState.LocalPlayer.ClassJob.GameData.Abbreviation || lastLevel != clientState.LocalPlayer.Level)
             {
                 lastLevel = clientState.LocalPlayer.Level;
                 lastJob = clientState.LocalPlayer.ClassJob.GameData.Abbreviation;
                 UpdateJobs();
+            }
+
+
+            if (!triggerSlowUpdate && !triggerFastUpdate)
+            {
+                return;
+            }
+
+            lastCheckUpdate = framework.LastUpdateUTC;
+
+            CheckRecastGroups();
+        }
+
+        private unsafe void CheckRecastGroups()
+        {
+            var actionManager = ActionManager.Instance();
+            Job? activeJob = null;
+            activeJob = Jobs.SingleOrDefault(j => j.IsActive);
+            if (activeJob != null)
+            {
+                foreach (var action in activeJob.Actions.Where(a => (a.DrawOnOGCDBar || a.TextToSpeechEnabled || a.SoundEffectEnabled)
+                    && a.Abilities.Any(ab => ab.IsAvailable)))
+                {
+                    var groupDetail = actionManager->GetRecastGroupDetail(action.RecastGroup);
+                    if (groupDetail->IsActive != 0)
+                    {
+                        action.StartCountdown(actionManager);
+                    }
+                }
             }
         }
 
@@ -187,10 +225,10 @@ namespace Oh_gee_CD
                 {
                     foreach (var ability in jobaction.Abilities)
                     {
-                        if (ability.OtherId != null) continue;
+                        if (ability.OtherAbility != null) continue;
                         if (ability.IsRoleAction)
                         {
-                            ability.OtherId = null;
+                            ability.OtherAbility = null;
                             continue;
                         }
 
@@ -198,8 +236,8 @@ namespace Oh_gee_CD
                         if (adjustedActionId != ability.Id)
                         {
                             var otherAbility = job.Actions.SelectMany(j => j.Abilities).Single(a => a.Id == adjustedActionId);
-                            ability.OtherId = otherAbility;
-                            otherAbility.OtherId = ability;
+                            ability.OtherAbility = otherAbility;
+                            otherAbility.OtherAbility = ability;
                             PluginLog.Debug(ability.Name + ":" + otherAbility.Name);
                         }
                     }
@@ -216,52 +254,7 @@ namespace Oh_gee_CD
                 //job.Debug();
             }
 
-            cts = new CancellationTokenSource();
-
-            Task.Run(() =>
-           {
-               try
-               {
-                   PluginLog.Debug("Starting checks for cast abilities");
-                   var actionManager = ActionManager.Instance();
-                   Job? activeJob = null;
-                   while (!cts.IsCancellationRequested)
-                   {
-                       activeJob = Jobs.SingleOrDefault(j => j.IsActive);
-                       if (activeJob != null)
-                       {
-                           foreach (var action in activeJob.Actions.Where(a => (a.DrawOnOGCDBar || a.TextToSpeechEnabled || a.SoundEffectEnabled)
-                               && a.Abilities.Any(ab => ab.IsAvailable)))
-                           {
-                               var groupDetail = actionManager->GetRecastGroupDetail(action.RecastGroup);
-                               if (groupDetail->IsActive != 0)
-                               {
-                                   action.StartCountdown(actionManager);
-                               }
-                           }
-                       }
-
-                        // slow down update rate while inactive
-                        if (!ProcessingActive())
-                       {
-                           int sleepTime = 10;
-                           while (sleepTime > 0 && !ProcessingActive())
-                           {
-                               Thread.Sleep(500);
-                               sleepTime--;
-                           }
-                       }
-                       else
-                       {
-                           Thread.Sleep(500);
-                       }
-                   }
-               }
-               catch (Exception ex)
-               {
-                   PluginLog.Error(ex.ToString());
-               }
-           }, cts.Token);
+            initialized = true;
         }
 
         private void ClientState_TerritoryChanged(object? sender, ushort e)
@@ -271,16 +264,6 @@ namespace Oh_gee_CD
                 Thread.Sleep(5000);
                 UpdateJobs();
             });
-        }
-
-        private void SpawnBars()
-        {
-            foreach (var bar in OGCDBars)
-            {
-                PluginLog.Debug("Spawning " + bar.Name);
-                OGCDBarUI ui = new OGCDBarUI(bar, system, this, helper);
-                bar.UI = ui;
-            }
         }
 
         private void RestoreDataFromConfiguration(OhGeeCDConfiguration configuration)

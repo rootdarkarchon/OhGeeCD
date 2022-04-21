@@ -15,12 +15,12 @@ namespace Oh_gee_CD
         [JsonIgnore]
         public byte RequiredJobLevel { get; set; }
         [JsonIgnore]
-        public OGCDAbility? OtherId { get; set; }
+        public OGCDAbility? OtherAbility { get; set; }
         [JsonIgnore]
-        public bool IsAvailable => CurrentJobLevel >= RequiredJobLevel && (OtherId?.RequiredJobLevel ?? 0) <= RequiredJobLevel
-            || CurrentJobLevel >= RequiredJobLevel && ((OtherId?.RequiredJobLevel ?? 90) > CurrentJobLevel);
+        public bool IsAvailable => CurrentJobLevel >= RequiredJobLevel && (OtherAbility?.RequiredJobLevel ?? 0) <= RequiredJobLevel
+            || CurrentJobLevel >= RequiredJobLevel && ((OtherAbility?.RequiredJobLevel ?? 90) > CurrentJobLevel);
         [JsonIgnore]
-        public bool OverwritesOrIsOverwritten => Id != (OtherId?.Id ?? Id);
+        public bool OverwritesOrIsOverwritten => Id != (OtherAbility?.Id ?? Id);
         [JsonIgnore]
         public bool IsRoleAction { get; set; }
         [JsonIgnore]
@@ -38,7 +38,7 @@ namespace Oh_gee_CD
 
         public override string ToString()
         {
-            return $"{Id}|{Name}|{RequiredJobLevel}|{OtherId?.Id}|{IsAvailable}|{IsRoleAction}";
+            return $"{Id}|{Name}|{RequiredJobLevel}|{OtherAbility?.Id}|{IsAvailable}|{IsRoleAction}";
         }
     }
 }
