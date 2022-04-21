@@ -2,8 +2,10 @@
 using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Hooking;
 using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
+using Dalamud.Utility.Signatures;
 using FFXIVClientStructs;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
@@ -18,7 +20,7 @@ using System.Threading.Tasks;
 namespace Oh_gee_CD
 {
     [Serializable]
-    public class PlayerManager : IDisposable
+    public unsafe class PlayerManager : IDisposable
     {
         private readonly Framework framework;
         private readonly DataManager dataManager;
@@ -30,6 +32,12 @@ namespace Oh_gee_CD
         public bool CutsceneActive => condition[ConditionFlag.OccupiedInCutSceneEvent] || condition[ConditionFlag.WatchingCutscene78];
         public bool InCombat => condition[ConditionFlag.InCombat];
         public bool InDuty => condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56] || condition[ConditionFlag.BoundByDuty95] || condition[ConditionFlag.BoundToDuty97];
+
+        public delegate long PlaySoundEffectDelegate(int a1, long a2, long a3, int a4);
+
+        [Signature("E8 ?? ?? ?? ?? 0F B7 0B 83 E9 64", DetourName = nameof(ActorControlSelf_Detour))]
+        private readonly Hook<ActorControlSelf>? actorControlSelfHook = null;
+        private delegate void ActorControlSelf(uint entityId, uint id, uint arg0, uint arg1, uint arg2, uint arg3, uint arg4, uint arg5, UInt64 targetId, byte a10);
 
         [JsonProperty]
         public SoundManager SoundManager { get; init; }
@@ -80,6 +88,8 @@ namespace Oh_gee_CD
             this.helper = helper;
             this.condition = condition;
             cts = new();
+            SignatureHelper.Initialise(this);
+            actorControlSelfHook?.Enable();
         }
 
         private DateTime lastFrameworkUpdate = DateTime.MinValue;
@@ -108,7 +118,6 @@ namespace Oh_gee_CD
                 UpdateJobs();
             }
 
-
             if (!triggerSlowUpdate && !triggerFastUpdate)
             {
                 return;
@@ -126,14 +135,17 @@ namespace Oh_gee_CD
             activeJob = Jobs.SingleOrDefault(j => j.IsActive);
             if (activeJob != null)
             {
-                foreach (var action in activeJob.Actions.Where(a => (a.DrawOnOGCDBar || a.TextToSpeechEnabled || a.SoundEffectEnabled)
-                    && a.Abilities.Any(ab => ab.IsAvailable)))
+                var actions = activeJob.Actions.Where(a => a.Abilities.Any(ab => ab.IsAvailable));
+
+                foreach (var action in actions)
                 {
                     var groupDetail = actionManager->GetRecastGroupDetail(action.RecastGroup);
-                    if (groupDetail->IsActive != 0)
+
+                    if ((action.DrawOnOGCDBar || action.TextToSpeechEnabled || action.SoundEffectEnabled) && groupDetail->IsActive != 0)
                     {
                         action.StartCountdown(actionManager);
                     }
+
                 }
             }
         }
@@ -151,6 +163,16 @@ namespace Oh_gee_CD
                 {
                     job.MakeInactive();
                 }
+            }
+        }
+
+        private void ActorControlSelf_Detour(uint entityId, uint id, uint arg0, uint arg1, uint arg2, uint arg3, uint arg4, uint arg5, UInt64 targetId, byte a10)
+        {
+            actorControlSelfHook?.Original(entityId, id, arg0, arg1, arg2, arg3, arg4, arg5, targetId, a10);
+            if (arg1 == 0x40000010)
+            {
+                PluginLog.Debug("This is a wipe");
+                UpdateJobs();
             }
         }
 
@@ -238,7 +260,6 @@ namespace Oh_gee_CD
                             var otherAbility = job.Actions.SelectMany(j => j.Abilities).Single(a => a.Id == adjustedActionId);
                             ability.OtherAbility = otherAbility;
                             otherAbility.OtherAbility = ability;
-                            PluginLog.Debug(ability.Name + ":" + otherAbility.Name);
                         }
                     }
                 }
@@ -332,6 +353,8 @@ namespace Oh_gee_CD
                 PluginLog.Debug($"Disposing {bar.Name}, UI:{bar.UI != null}");
                 bar.Dispose();
             }
+
+            actorControlSelfHook?.Dispose();
 
             if (framework != null)
                 framework.Update -= Framework_Update;
