@@ -38,6 +38,7 @@ namespace Oh_gee_CD
             ParentAbbreviation = parent;
         }
 
+        [JsonProperty]
         public List<OGCDAction> Actions { get; set; } = new List<OGCDAction>();
 
         public void MakeActive()

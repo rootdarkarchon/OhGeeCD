@@ -1,8 +1,8 @@
 ﻿using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
 using ImGuiNET;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
@@ -15,7 +15,7 @@ namespace Oh_gee_CD
         private readonly PlayerManager playerManager;
         private readonly DrawHelper drawHelper;
 
-        public OGCDBarUI(OGCDBar bar, WindowSystem system, PlayerManager playerManager, DrawHelper drawHelper) : base("OGCDBarTest2" + bar.Name + bar.Id)
+        public OGCDBarUI(OGCDBar bar, WindowSystem system, PlayerManager playerManager, DrawHelper drawHelper) : base("OGCDBarUI" + bar.Id)
         {
             this.bar = bar;
             this.system = system;
@@ -85,14 +85,18 @@ namespace Oh_gee_CD
             }
 
             var jobActions = job.Actions.Where(j => j.OGCDBarId == bar.Id && j.DrawOnOGCDBar && j.Abilities.Any(a => a.IsAvailable)).ToArray();
+            var barPositions = bar.JobRecastGroupIds.ContainsKey(job.Abbreviation) ? bar.JobRecastGroupIds[job.Abbreviation] : new List<byte>();
             //PluginLog.Debug(string.Join(',', jobActions.Select(j => string.Join(';', j.Abilities.Select(a => a.ToString())))));
             int i = 0;
             int j = 0;
 
             short iconSize = (short)(DEFAULT_SIZE * bar.Scale);
 
-            foreach (var action in jobActions)
+            foreach (var actionId in barPositions)
             {
+                var action = jobActions.SingleOrDefault(j => j.RecastGroup == actionId);
+                if (action == null) continue;
+
                 DrawOGCD(action, new Vector2(
                     ImGui.GetWindowContentRegionMin().X + iconSize * i + bar.HorizontalPadding * i,
                     ImGui.GetWindowContentRegionMin().Y + iconSize * j + bar.VerticalPadding * j),

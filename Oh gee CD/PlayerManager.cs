@@ -325,6 +325,13 @@ namespace Oh_gee_CD
         {
             var barID = bar.Id;
             OGCDBars.Remove(bar);
+            foreach (var action in Jobs.SelectMany(j => j.Actions))
+            {
+                if (action.OGCDBarId == barID)
+                {
+                    action.OGCDBarId = 0;
+                }
+            }
             return barID;
         }
 

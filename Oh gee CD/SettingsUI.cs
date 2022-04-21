@@ -49,19 +49,19 @@ namespace Oh_gee_CD
             }
             if (ImGui.BeginTabItem("Abilities"))
             {
-                DrawJobs();
+                DrawJobsSettings();
                 ImGui.EndTabItem();
             }
             if (ImGui.BeginTabItem("OGCD Bars"))
             {
-                DrawOGCDBars();
+                DrawOGCDBarsSettings();
                 ImGui.EndTabItem();
             }
             ImGui.EndTabBar();
 
         }
 
-        private void DrawOGCDBars()
+        private void DrawOGCDBarsSettings()
         {
             ImGui.BeginListBox("##OGCDBars", new Vector2(200, ImGui.GetContentRegionAvail().Y));
             int index = 0;
@@ -76,18 +76,13 @@ namespace Oh_gee_CD
 
             if (ImGui.Button("-"))
             {
-                if (selectedOGCDIndex < 0) return;
-                var removedOGCDBarId = manager.OGCDBars[selectedOGCDIndex].Id;
-                foreach (var job in manager.Jobs.SelectMany(j => j.Actions))
-                {
-                    if (job.OGCDBarId == removedOGCDBarId) job.OGCDBarId = 0;
-                }
+                if (selectedOGCDIndex < 0 || !ImGui.GetIO().KeyCtrl) return;
+
                 manager.RemoveOGCDBar(manager.OGCDBars[selectedOGCDIndex]);
                 if (manager.OGCDBars.Count == 0) selectedOGCDIndex = -1;
                 else
                     selectedOGCDIndex--;
             }
-
 
             foreach (var ogcdBar in manager.OGCDBars)
             {
@@ -193,11 +188,55 @@ namespace Oh_gee_CD
             }
 
             ImGui.Text("Items currently in bar:");
-            ImGui.Indent();
 
             foreach (var job in manager.Jobs)
             {
-                foreach (var action in job.Actions)
+                var items = bar.JobRecastGroupIds.ContainsKey(job.Abbreviation) ? bar.JobRecastGroupIds[job.Abbreviation] : null;
+                if (items == null) continue;
+
+                if (ImGui.CollapsingHeader(job.Abbreviation + " (" + items.Count + " item(s))", ImGuiTreeNodeFlags.None))
+                {
+                    var i = 0;
+                    ImGui.NewLine();
+
+                    try
+                    {
+                        foreach (var item in items)
+                        {
+                            ImGui.SameLine(10);
+
+                            var action = job.Actions.Single(j => j.RecastGroup == item);
+                            if (i != 0)
+                            {
+                                if (ImGui.ArrowButton(job.Abbreviation + action.RecastGroup + "Up", ImGuiDir.Up))
+                                {
+                                    bar.MoveActionUp(job, action);
+                                }
+                            }
+
+                            if (i != items.Count - 1)
+                            {
+                                ImGui.SameLine(30);
+                                if (ImGui.ArrowButton(job.Abbreviation + action.RecastGroup + "Down", ImGuiDir.Down))
+                                {
+                                    bar.MoveActionDown(job, action);
+                                }
+                            }
+
+                            ImGui.SameLine(60);
+                            drawHelper.DrawIcon(action.IconToDraw == 0 ? action.Abilities[0].Icon : action.IconToDraw, new Vector2(16, 16));
+                            ImGui.SameLine();
+                            ImGui.Text(string.Join(" / ", action.Abilities.Select(a => a.Name)));
+                            if (i != items.Count - 1)
+                            {
+                                ImGui.NewLine();
+                            }
+                            i++;
+                        }
+                    }
+                    catch { }
+                }
+                /*foreach (var action in job.Actions)
                 {
                     if (action.DrawOnOGCDBar && action.OGCDBarId == bar.Id)
                     {
@@ -206,7 +245,7 @@ namespace Oh_gee_CD
                             ImGui.Text($"{job.Abbreviation}: {ability.Name}");
                         }
                     }
-                }
+                }*/
             }
 
             ImGui.Unindent();
@@ -264,7 +303,7 @@ namespace Oh_gee_CD
             }
         }
 
-        private void DrawJobs()
+        private void DrawJobsSettings()
         {
             ImGui.BeginListBox("##Jobs", new Vector2(100, ImGui.GetContentRegionAvail().Y));
             int index = 0;
@@ -289,6 +328,11 @@ namespace Oh_gee_CD
             ImGui.SameLine();
 
             ImGui.BeginChild("content", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y));
+            if (selectedJobIndex < 0) return;
+            ImGui.SetWindowFontScale(1.3f);
+            ImGui.Text(manager.Jobs[selectedJobIndex].Abbreviation + " / " + manager.Jobs[selectedJobIndex].ParentAbbreviation);
+            ImGui.SetWindowFontScale(1.0f);
+            ImGui.Separator();
             foreach (var action in manager.Jobs[selectedJobIndex].Actions)
             {
                 DrawOGCDAction(manager.Jobs[selectedJobIndex], action);
@@ -500,7 +544,11 @@ namespace Oh_gee_CD
                 {
                     if (ImGui.Selectable("None##" + action.RecastGroup, action.OGCDBarId == 0))
                     {
-                        action.OGCDBarId = 0;
+                        foreach (var val in manager.OGCDBars)
+                        {
+                            val.RemoveOGCDAction(job, action);
+                        }
+                        //action.OGCDBarId = 0;
                     }
 
                     if (action.OGCDBarId == 0)
@@ -512,7 +560,8 @@ namespace Oh_gee_CD
                     {
                         if (ImGui.Selectable(item.Name, action.OGCDBarId == item.Id))
                         {
-                            action.OGCDBarId = item.Id;
+                            item.AddOGCDAction(job, action);
+                            //action.OGCDBarId = item.Id;
                         }
 
                         if (item.Id == action.OGCDBarId)

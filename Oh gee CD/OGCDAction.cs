@@ -81,59 +81,51 @@ namespace Oh_gee_CD
         }
 
         private bool timerRunning = false;
-        private int soundQueue = 1;
+        private int soundsToPlay = 1;
 
         public unsafe void StartCountdown(ActionManager* actionManager)
         {
             if (timerRunning)
             {
-                //PluginLog.Debug("Running:" + RecastGroup + ":" + CurrentCharges + "/" + MaxCharges);
                 return;
             }
             cts = new CancellationTokenSource();
             Task.Run(() =>
             {
                 timerRunning = true;
-                // wait and see if it actually needs to run, ffxiv has the tendency to somehow 
-                // just set the ability to active just to make it inactive just a second or so later
-                Thread.Sleep(1000);
 
-                var detail = actionManager->GetRecastGroupDetail(RecastGroup);
-                CurrentCharges = (short)Math.Floor(detail->Elapsed / Recast.TotalSeconds);
-                if (CurrentCharges == MaxCharges || detail->IsActive != 1) return;
+                var recastGroupDetail = actionManager->GetRecastGroupDetail(RecastGroup);
+                CurrentCharges = (short)Math.Floor(recastGroupDetail->Elapsed / Recast.TotalSeconds);
+                if (CurrentCharges == MaxCharges || recastGroupDetail->IsActive != 1) return;
 
-                soundQueue = 1;
+                soundsToPlay = 1;
                 timerRunning = true;
                 CooldownTimer = 0;
-                bool earlyCallOutReset = true;
-                PluginLog.Debug("Starting:" + RecastGroup + ":" + CurrentCharges + "/" + MaxCharges);
+                bool resetEarlyCallout = true;
+                PluginLog.Debug("Start:" + RecastGroup + "|" + CurrentCharges + "/" + MaxCharges);
                 bool cancelled = false;
                 do
                 {
-                    detail = actionManager->GetRecastGroupDetail(RecastGroup);
-
-                    var curTimeElapsed = detail->Elapsed;
-
                     // reset early callout if the CooldownTimer is suddenly smaller than the new CooldownTimer 
+                    var curTimeElapsed = recastGroupDetail->Elapsed;
                     var newCoolDown = ((Recast.TotalSeconds * MaxCharges - curTimeElapsed) % Recast.TotalSeconds);
-                    earlyCallOutReset = earlyCallOutReset || CooldownTimer < newCoolDown;
-                    //PluginLog.Debug("CalloutReset:" + earlyCallOutReset);
+                    resetEarlyCallout = resetEarlyCallout || CooldownTimer < newCoolDown;
                     CooldownTimer = newCoolDown;
 
-                    var newCharges = (short)Math.Floor(detail->Elapsed / Recast.TotalSeconds);
-
+                    var newCharges = (short)Math.Floor(recastGroupDetail->Elapsed / Recast.TotalSeconds);
                     if (newCharges < CurrentCharges)
                     {
-                        soundQueue++;
-                        PluginLog.Debug(RecastGroup + ":NewCharges|" + newCharges + ":CurrentCharges|" + CurrentCharges);
+                        soundsToPlay++;
+                        PluginLog.Debug("UseCharge:" + RecastGroup + "|NewCharges:" + newCharges + "|CurrentCharges:" + CurrentCharges);
                     }
 
-                    if ((soundQueue > 1 && newCharges > CurrentCharges && EarlyCallout == 0.0) // if we have more charges than we had in the prior loop, we need to notify
-                           || (CooldownTimer <= EarlyCallout && soundQueue >= 1 && earlyCallOutReset)) // if the timer is below early callout and we have a sound queue of greater equal 1 we also need to notify
+                    bool doIntermediateCallout = soundsToPlay > 1 && newCharges > CurrentCharges && EarlyCallout == 0.0;
+                    bool doEarlyCallout = CooldownTimer <= EarlyCallout && soundsToPlay >= 1 && resetEarlyCallout;
+                    if (doIntermediateCallout || doEarlyCallout)
                     {
                         PlaySound();
-                        if (CooldownTimer <= EarlyCallout && soundQueue >= 1 && earlyCallOutReset) earlyCallOutReset = false;
-                        if (soundQueue > 0) soundQueue--;
+                        if (doEarlyCallout) resetEarlyCallout = false;
+                        if (soundsToPlay > 0) soundsToPlay--;
                     }
 
                     CurrentCharges = newCharges;
@@ -144,12 +136,16 @@ namespace Oh_gee_CD
                         PluginLog.Debug("Cancel:" + RecastGroup);
                         cancelled = true;
                     }
+                    else
+                    {
+                        recastGroupDetail = actionManager->GetRecastGroupDetail(RecastGroup);
+                    }
 
-                } while (detail->IsActive == 1 && !cancelled && CurrentCharges != MaxCharges);
+                } while (recastGroupDetail->IsActive == 1 && !cancelled && CurrentCharges != MaxCharges);
 
                 CurrentCharges = MaxCharges;
-                PluginLog.Debug("Ending:" + RecastGroup + ":" + CurrentCharges + "/" + MaxCharges + ":Cancel|" + cancelled + "|Queue:" + soundQueue);
-                if (soundQueue == 1 && !cancelled)
+                PluginLog.Debug("Ending:" + RecastGroup + "|" + "|Cancel:" + cancelled + "|Queue:" + soundsToPlay);
+                if (soundsToPlay == 1 && !cancelled)
                 {
                     PlaySound();
                 }
