@@ -236,16 +236,6 @@ namespace Oh_gee_CD
                     }
                     catch { }
                 }
-                /*foreach (var action in job.Actions)
-                {
-                    if (action.DrawOnOGCDBar && action.OGCDBarId == bar.Id)
-                    {
-                        foreach (var ability in action.Abilities)
-                        {
-                            ImGui.Text($"{job.Abbreviation}: {ability.Name}");
-                        }
-                    }
-                }*/
             }
 
             ImGui.Unindent();
@@ -254,30 +244,25 @@ namespace Oh_gee_CD
         private void DrawGeneralSettings()
         {
             bool showAlways = manager.ShowAlways;
-            if (ImGui.Checkbox("Show always", ref showAlways))
+            if (ImGui.Checkbox("Enable always", ref showAlways))
             {
                 manager.ShowAlways = showAlways;
             }
-
-            DrawHelper.DrawHelpText("Will show the OGCDBars always and always play sounds");
-
-            bool showInCombat = manager.ShowInCombat;
-            if (ImGui.Checkbox("Show in combat", ref showInCombat))
-            {
-                manager.ShowInCombat = showInCombat;
-            }
-
-            DrawHelper.DrawHelpText("Will show the OGCDBars in combat and play sounds in combat");
-
+            DrawHelper.DrawHelpText("Will show the OGCDBars always and always play sounds. Overrides Enable in duty and Enable in combat.");
 
             bool showInDuty = manager.ShowInDuty;
-            if (ImGui.Checkbox("Show in duty", ref showInDuty))
+            if (ImGui.Checkbox("Enable in duty", ref showInDuty))
             {
                 manager.ShowInDuty = showInDuty;
             }
-
             DrawHelper.DrawHelpText("Will show the OGCDBars in duty and play sounds in duty");
 
+            bool showInCombat = manager.ShowInCombat;
+            if (ImGui.Checkbox("Enable in combat", ref showInCombat))
+            {
+                manager.ShowInCombat = showInCombat;
+            }
+            DrawHelper.DrawHelpText("Will show the OGCDBars in combat and play sounds in combat");
 
             int textToSpeechVolume = manager.SoundManager.TTSVolume;
             if (ImGui.SliderInt("TTS Volume##", ref textToSpeechVolume, 0, 100))

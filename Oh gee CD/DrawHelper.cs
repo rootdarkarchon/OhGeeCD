@@ -59,6 +59,28 @@ namespace Oh_gee_CD
 
         public static uint Color(byte r, byte g, byte b, byte a) { uint ret = a; ret <<= 8; ret += b; ret <<= 8; ret += g; ret <<= 8; ret += r; return ret; }
 
+        public static void DrawOutlinedFont(ImDrawListPtr drawList, string text, Vector2 textPos, uint fontColor, uint outlineColor, int thickness)
+        {
+            drawList.AddText(new Vector2(textPos.X, textPos.Y - thickness),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X - thickness, textPos.Y),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X, textPos.Y + thickness),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X + thickness, textPos.Y),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X, textPos.Y - thickness),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X - thickness, textPos.Y),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X, textPos.Y + thickness),
+                outlineColor, text);
+            drawList.AddText(new Vector2(textPos.X + thickness, textPos.Y),
+                outlineColor, text);
+
+            drawList.AddText(textPos, fontColor, text);
+            drawList.AddText(textPos, fontColor, text);
+        }
 
         public static void DrawHelpText(string helpText)
         {

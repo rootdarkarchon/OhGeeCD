@@ -86,9 +86,9 @@ namespace Oh_gee_CD
 
             var jobActions = job.Actions.Where(j => j.OGCDBarId == bar.Id && j.DrawOnOGCDBar && j.Abilities.Any(a => a.IsAvailable)).ToArray();
             var barPositions = bar.JobRecastGroupIds.ContainsKey(job.Abbreviation) ? bar.JobRecastGroupIds[job.Abbreviation] : new List<byte>();
-            //PluginLog.Debug(string.Join(',', jobActions.Select(j => string.Join(';', j.Abilities.Select(a => a.ToString())))));
-            int i = 0;
-            int j = 0;
+            
+            int x = 0;
+            int y = 0;
 
             short iconSize = (short)(DEFAULT_SIZE * bar.Scale);
 
@@ -98,36 +98,39 @@ namespace Oh_gee_CD
                 if (action == null) continue;
 
                 DrawOGCD(action, new Vector2(
-                    ImGui.GetWindowContentRegionMin().X + iconSize * i + bar.HorizontalPadding * i,
-                    ImGui.GetWindowContentRegionMin().Y + iconSize * j + bar.VerticalPadding * j),
+                    ImGui.GetWindowContentRegionMin().X + iconSize * x + bar.HorizontalPadding * x,
+                    ImGui.GetWindowContentRegionMin().Y + iconSize * y + bar.VerticalPadding * y),
                     iconSize);
                 if (bar.HorizontalLayout == OGCDBarHorizontalLayout.LeftToRight)
-                    i++;
+                    x++;
                 else
-                    i--;
+                    x--;
 
-                if (Math.Abs(i) == bar.MaxItemsHorizontal)
+                if (Math.Abs(x) == bar.MaxItemsHorizontal)
                 {
-                    i = 0;
+                    x = 0;
                     if (bar.VerticalLayout == OGCDBarVerticalLayout.TopToBottom)
-                        j++;
+                        y++;
                     else
-                        j--;
+                        y--;
                 }
             }
 
-            ImGui.SetWindowSize(ImGuiHelpers.ScaledVector2(iconSize + (float)(12 * bar.Scale), iconSize + (float)(12 * bar.Scale)));
+            ImGui.SetWindowSize(new Vector2(iconSize + 20, iconSize + 12));
         }
 
         public void DrawOGCD(OGCDAction action, Vector2 position, short size)
         {
             var drawList = ImGui.GetWindowDrawList();
             position = new Vector2(ImGui.GetWindowPos().X + position.X, ImGui.GetWindowPos().Y + position.Y);
+
             ImGui.PushClipRect(position, new Vector2(position.X + size * 2,
                 position.Y + size * 2), false);
 
-            var iconToDraw = action.IconToDraw != 0 && action.Abilities.Single(a => a.Icon == action.IconToDraw).IsAvailable
-                ? action.IconToDraw : action.Abilities.Where(a => a.IsAvailable).OrderByDescending(a => a.RequiredJobLevel).First().Icon;
+            var iconToDraw = action.IconToDraw != 0 
+                && action.Abilities.Single(a => a.Icon == action.IconToDraw).IsAvailable
+                    ? action.IconToDraw 
+                    : action.Abilities.Where(a => a.IsAvailable).OrderByDescending(a => a.RequiredJobLevel).First().Icon;
             drawHelper.DrawIconClipRect(drawList, iconToDraw, position, new Vector2(position.X + size, position.Y + size));
 
             if ((int)action.CooldownTimer > 0)
@@ -151,14 +154,14 @@ namespace Oh_gee_CD
                 Vector2 cornerPos = new Vector2(position.X + size - textSize.X * 0.8f, position.Y + size - (textSize.Y * 0.7f));
 
 
-                DrawOutlinedFont(drawList, cooldownString, cornerPos, fontColorText, fontColorOutline, 2);
+                DrawHelper.DrawOutlinedFont(drawList, cooldownString, cornerPos, fontColorText, fontColorOutline, 2);
 
                 ImGui.SetWindowFontScale(1);
             }
 
             if ((int)action.CooldownTimer > 0)
             {
-                string cooldownString = action.CooldownTimer.ToString("0");
+                string cooldownString = action.CooldownTimer.ToString("0.0");
 
                 ImGui.SetWindowFontScale(2 * (size / (float)DEFAULT_SIZE));
 
@@ -167,37 +170,13 @@ namespace Oh_gee_CD
                 uint fontColorOutline = DrawHelper.Color(0, 0, 0, 255);
                 Vector2 centerPos = new Vector2(position.X + size / 2 - textSize.X / 2, position.Y + size / 2 - textSize.Y / 2);
 
-                DrawOutlinedFont(drawList, cooldownString, centerPos, fontColorText, fontColorOutline, 2);
+                DrawHelper.DrawOutlinedFont(drawList, cooldownString, centerPos, fontColorText, fontColorOutline, 2);
 
                 ImGui.SetWindowFontScale(1);
             }
 
             drawList.PopClipRect();
         }
-
-        private void DrawOutlinedFont(ImDrawListPtr drawList, string text, Vector2 textPos, uint fontColor, uint outlineColor, int thickness)
-        {
-            drawList.AddText(new Vector2(textPos.X, textPos.Y - thickness),
-                outlineColor, text);
-            drawList.AddText(new Vector2(textPos.X - thickness, textPos.Y),
-                outlineColor, text);
-            drawList.AddText(new Vector2(textPos.X, textPos.Y + thickness),
-                outlineColor, text);
-            drawList.AddText(new Vector2(textPos.X + thickness, textPos.Y),
-                outlineColor, text);
-            drawList.AddText(new Vector2(textPos.X, textPos.Y - thickness),
-                outlineColor, text);
-            drawList.AddText(new Vector2(textPos.X - thickness, textPos.Y),
-                outlineColor, text);
-            drawList.AddText(new Vector2(textPos.X, textPos.Y + thickness),
-                outlineColor, text);
-            drawList.AddText(new Vector2(textPos.X + thickness, textPos.Y),
-                outlineColor, text);
-
-            drawList.AddText(textPos, fontColor, text);
-            drawList.AddText(textPos, fontColor, text);
-        }
-
 
         public void Dispose()
         {
