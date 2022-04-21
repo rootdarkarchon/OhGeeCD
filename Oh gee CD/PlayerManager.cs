@@ -51,7 +51,6 @@ namespace Oh_gee_CD
         public List<OGCDBar> OGCDBars { get; set; } = new();
         private string lastJob = string.Empty;
         private uint lastLevel = 0;
-        private CancellationTokenSource cts = new();
 
         public bool ProcessingActive()
         {
@@ -87,7 +86,6 @@ namespace Oh_gee_CD
             this.system = system;
             this.helper = helper;
             this.condition = condition;
-            cts = new();
             SignatureHelper.Initialise(this);
             actorControlSelfHook?.Enable();
         }
@@ -332,12 +330,6 @@ namespace Oh_gee_CD
 
         public void Dispose()
         {
-            try
-            {
-                cts?.Cancel();
-            }
-            catch { }
-
             foreach (var job in Jobs)
             {
                 job.Dispose();
