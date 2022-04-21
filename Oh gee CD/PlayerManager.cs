@@ -171,7 +171,6 @@ namespace Oh_gee_CD
             actorControlSelfHook?.Original(entityId, id, arg0, arg1, arg2, arg3, arg4, arg5, targetId, a10);
             if (arg1 == 0x40000010)
             {
-                PluginLog.Debug("This is a wipe");
                 UpdateJobs();
             }
         }
@@ -214,11 +213,11 @@ namespace Oh_gee_CD
                     if (action.ClassJob?.Value != null || action.ClassJobCategory.Value.Name.RawString.Contains(job.Abbreviation))
                     {
                         var abbr = action.ClassJob?.Value?.Abbreviation;
-                        if ((abbr?.RawString == job.Abbreviation
-                            || (abbr?.RawString == job.ParentAbbreviation && job.ParentAbbreviation != null)
-                            || (action.ClassJobCategory.Value.Name.RawString.Contains(job.Abbreviation) && action.IsRoleAction))
-                            && action.ActionCategory.Value.Name == "Ability"
-                            && action.ClassJobLevel > 0)
+                        if ((abbr?.RawString == job.Abbreviation // if it's for the actual job
+                            || (abbr?.RawString == job.ParentAbbreviation && job.ParentAbbreviation != null) // or for the parent job
+                            || (action.ClassJobCategory.Value.Name.RawString.Contains(job.Abbreviation) && action.IsRoleAction)) // or a role action of the current job
+                            && action.ActionCategory.Value.RowId == (uint)ActionType.Ability // 4 is ability
+                            && action.ClassJobLevel > 0) // and not something that is used in bozja or whereever
                         {
                             var potentialJobAction = job.Actions.FirstOrDefault(a => a.RecastGroup == action.CooldownGroup - 1);
                             if (potentialJobAction != null)
