@@ -36,7 +36,7 @@ namespace Oh_gee_CD
         [JsonProperty]
         public double Scale { get; set; } = 1.0;
         [JsonProperty]
-        public Dictionary<string, List<byte>> JobRecastGroupIds { get; set; } = new();
+        public Dictionary<uint, List<byte>> JobRecastGroupIds { get; set; } = new();
         [JsonIgnore]
         public bool InEditMode { get; set; }
         [JsonIgnore]
@@ -54,38 +54,38 @@ namespace Oh_gee_CD
 
         public void AddOGCDAction(Job job, OGCDAction action)
         {
-            if (!JobRecastGroupIds.ContainsKey(job.Abbreviation))
+            if (!JobRecastGroupIds.ContainsKey(job.Id))
             {
-                JobRecastGroupIds.Add(job.Abbreviation, new List<byte>());
+                JobRecastGroupIds.Add(job.Id, new List<byte>());
             }
 
             //action.OGCDBarId = Id;
-            if (!JobRecastGroupIds[job.Abbreviation].Contains(action.RecastGroup))
-                JobRecastGroupIds[job.Abbreviation].Add(action.RecastGroup);
+            if (!JobRecastGroupIds[job.Id].Contains(action.RecastGroup))
+                JobRecastGroupIds[job.Id].Add(action.RecastGroup);
         }
 
         public void RemoveOGCDAction(Job job, OGCDAction action)
         {
-            if (!JobRecastGroupIds.ContainsKey((job.Abbreviation))) return;
+            if (!JobRecastGroupIds.ContainsKey((job.Id))) return;
 
             //action.OGCDBarId = 0;
-            JobRecastGroupIds[job.Abbreviation].Remove(action.RecastGroup);
+            JobRecastGroupIds[job.Id].Remove(action.RecastGroup);
         }
 
         internal void MoveActionUp(Job job, OGCDAction action)
         {
-            var oldIndex = JobRecastGroupIds[job.Abbreviation].IndexOf(action.RecastGroup);
+            var oldIndex = JobRecastGroupIds[job.Id].IndexOf(action.RecastGroup);
             var newIndex = oldIndex - 1;
-            JobRecastGroupIds[job.Abbreviation].RemoveAt(oldIndex);
-            JobRecastGroupIds[job.Abbreviation].Insert(newIndex, action.RecastGroup); 
+            JobRecastGroupIds[job.Id].RemoveAt(oldIndex);
+            JobRecastGroupIds[job.Id].Insert(newIndex, action.RecastGroup); 
         }
 
         internal void MoveActionDown(Job job, OGCDAction action)
         {
-            var oldIndex = JobRecastGroupIds[job.Abbreviation].IndexOf(action.RecastGroup);
+            var oldIndex = JobRecastGroupIds[job.Id].IndexOf(action.RecastGroup);
             var newIndex = oldIndex + 1;
-            JobRecastGroupIds[job.Abbreviation].RemoveAt(oldIndex);
-            JobRecastGroupIds[job.Abbreviation].Insert(newIndex, action.RecastGroup);
+            JobRecastGroupIds[job.Id].RemoveAt(oldIndex);
+            JobRecastGroupIds[job.Id].Insert(newIndex, action.RecastGroup);
         }
     }
 

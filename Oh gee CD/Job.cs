@@ -10,6 +10,8 @@ namespace Oh_gee_CD
     public class Job : IDisposable
     {
         [JsonProperty]
+        public uint Id { get; }
+        [JsonIgnore]
         public string Abbreviation { get; private set; }
 
         [JsonIgnore]
@@ -42,8 +44,9 @@ namespace Oh_gee_CD
             Name = NameToUpper(name);
         }
 
-        public Job(string name, string? parent = null, string? jobname = null, string? parentJobName = null)
+        public Job(uint id, string name, string? parent = null, string? jobname = null, string? parentJobName = null)
         {
+            Id = id;
             Abbreviation = name;
             ParentAbbreviation = parent;
             Name = NameToUpper(jobname);

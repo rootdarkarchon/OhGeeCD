@@ -209,7 +209,7 @@ namespace Oh_gee_CD
                 var jobinList = Jobs.FirstOrDefault(j => j.Abbreviation == job.ClassJobParent?.Value?.Abbreviation.RawString);
                 if (jobinList == null)
                 {
-                    var newJob = new Job(job.Abbreviation.RawString, job.ClassJobParent?.Value?.Abbreviation.RawString, job.Name.RawString, job.ClassJobParent?.Value?.Name.RawString);
+                    var newJob = new Job(i, job.Abbreviation.RawString, job.ClassJobParent?.Value?.Abbreviation.RawString, job.Name.RawString, job.ClassJobParent?.Value?.Name.RawString);
                     newJob.SetLevel((uint)levels[job.ExpArrayIndex]);
                     Jobs.Add(newJob);
                 }
@@ -298,7 +298,7 @@ namespace Oh_gee_CD
             PluginLog.Debug("Restoring configuration");
             foreach (var job in configuration.PlayerManager.Jobs)
             {
-                var initJob = Jobs.First(j => j.Abbreviation == job.Abbreviation);
+                var initJob = Jobs.First(j => j.Id == job.Id);
                 foreach (var action in initJob.Actions)
                 {
                     var fittingActionFromConfig = job.Actions.FirstOrDefault(a => a.RecastGroup == action.RecastGroup);

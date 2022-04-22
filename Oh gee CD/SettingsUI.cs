@@ -215,7 +215,7 @@ namespace Oh_gee_CD
 
             foreach (var job in manager.Jobs)
             {
-                var items = (bar.JobRecastGroupIds.ContainsKey(job.Abbreviation) ? bar.JobRecastGroupIds[job.Abbreviation] : null)
+                var items = (bar.JobRecastGroupIds.ContainsKey(job.Id) ? bar.JobRecastGroupIds[job.Id] : null)
                     ?.Where(i => job.Actions.Any(a => a.RecastGroup == i && a.DrawOnOGCDBar)).ToList();
                 if (items == null || items?.Count == 0) continue;
 
@@ -228,7 +228,7 @@ namespace Oh_gee_CD
                     {
                         foreach (var item in items)
                         {
-                            ImGui.SameLine(10);
+                            ImGui.SameLine(5);
 
                             var action = job.Actions.Single(j => j.RecastGroup == item);
                             if (i != 0)
@@ -315,7 +315,7 @@ namespace Oh_gee_CD
 
         private unsafe void DrawJobsSettings()
         {
-            ImGui.BeginListBox("##Jobs", new Vector2(100, ImGui.GetContentRegionAvail().Y));
+            ImGui.BeginListBox("##Jobs", new Vector2(100 * ImGui.GetIO().FontGlobalScale, ImGui.GetContentRegionAvail().Y));
             int index = 0;
 
             foreach (var job in manager.Jobs)
@@ -346,7 +346,7 @@ namespace Oh_gee_CD
             ImGui.Separator();
 
             var orderedActions = selectedJob.Actions.OrderBy(a => a.Abilities[0].Name).ToList();
-            if (ImGui.BeginChild("itemSelection", new Vector2(200, ImGui.GetContentRegionAvail().Y)))
+            if (ImGui.BeginChild("itemSelection", new Vector2(200 * ImGui.GetIO().FontGlobalScale, ImGui.GetContentRegionAvail().Y)))
             {
                 if (ImGui.BeginTable("itemTable", 1, ImGuiTableFlags.None))
                 {
@@ -417,11 +417,12 @@ namespace Oh_gee_CD
                 if (earlyCallout > action.Recast.TotalSeconds) earlyCallout = action.Recast.TotalSeconds;
                 action.EarlyCallout = earlyCallout;
             }
-            DrawHelper.DrawHelpText("This will give the callout earlier than the skill is available.");
+            DrawHelper.DrawHelpText("This will give the callout earlier than the ability will be available.");
 
             if (action.Abilities.Count > 1)
             {
                 string abilityName = action.IconToDraw == 0 ? action.Abilities[0].Name : action.Abilities.SingleOrDefault(a => a.Icon == action.IconToDraw)?.Name ?? action.Abilities[0].Name;
+                ImGui.SetNextItemWidth(340);
                 if (ImGui.BeginCombo("Icon to Draw##" + action.RecastGroup, abilityName))
                 {
                     foreach (var ability in action.Abilities)
@@ -439,6 +440,9 @@ namespace Oh_gee_CD
 
                     ImGui.EndCombo();
                 }
+
+                DrawHelper.DrawHelpText("This icon will be selected to be drawn on the UI.\nIf the ability is not available at " +
+                    "your level due to level sync, it will default to the first ability in the list.");
             }
         }
 
@@ -450,15 +454,18 @@ namespace Oh_gee_CD
             {
                 action.DrawOnOGCDBar = onGCDBar;
             }
+            DrawHelper.DrawHelpText("Enables drawing on OGCD Bars.\n\nThe ability will be drawn on the OGCD Bar you select below.\n" +
+                "Keep in mind you will need to create a OGCD Bar first.");
+
             ImGui.SetWindowFontScale(1);
             ImGui.Separator();
 
             ImGui.SetNextItemWidth(350);
 
             if (ImGui.BeginCombo("OGCD Bar##" + action.RecastGroup,
-                manager.OGCDBars.SingleOrDefault(a => a.JobRecastGroupIds.ContainsKey(job.Abbreviation) && a.JobRecastGroupIds[job.Abbreviation].Contains(action.RecastGroup))?.Name ?? "None"))
+                manager.OGCDBars.SingleOrDefault(a => a.JobRecastGroupIds.ContainsKey(job.Id) && a.JobRecastGroupIds[job.Id].Contains(action.RecastGroup))?.Name ?? "None"))
             {
-                var inBar = manager.OGCDBars.Any(bar => bar.JobRecastGroupIds.ContainsKey(job.Abbreviation) && bar.JobRecastGroupIds[job.Abbreviation].Contains(action.RecastGroup));
+                var inBar = manager.OGCDBars.Any(bar => bar.JobRecastGroupIds.ContainsKey(job.Id) && bar.JobRecastGroupIds[job.Id].Contains(action.RecastGroup));
                 if (ImGui.Selectable("None##" + action.RecastGroup, !inBar))
                 {
                     foreach (var bar in manager.OGCDBars)
@@ -474,7 +481,7 @@ namespace Oh_gee_CD
 
                 foreach (var bar in manager.OGCDBars)
                 {
-                    inBar = bar.JobRecastGroupIds.ContainsKey(job.Abbreviation) && bar.JobRecastGroupIds[job.Abbreviation].Contains(action.RecastGroup);
+                    inBar = bar.JobRecastGroupIds.ContainsKey(job.Id) && bar.JobRecastGroupIds[job.Id].Contains(action.RecastGroup);
                     if (ImGui.Selectable(bar.Name, inBar))
                     {
                         bar.AddOGCDAction(job, action);
@@ -495,10 +502,13 @@ namespace Oh_gee_CD
         {
             ImGui.SetWindowFontScale(1.3f);
             bool soundEnabled = action.SoundEffectEnabled;
+
             if (ImGui.Checkbox("Play Sound##" + action.RecastGroup, ref soundEnabled))
             {
                 action.SoundEffectEnabled = soundEnabled;
             }
+            DrawHelper.DrawHelpText("Enables Sound Effects.\n\nOnce the ability is off cooldown this plugin will play the sounds as set below.");
+
             ImGui.SetWindowFontScale(1);
             ImGui.Separator();
 
@@ -559,8 +569,8 @@ namespace Oh_gee_CD
             {
                 SoundEvent?.Invoke(null, new SoundEventArgs(null, null, action.SoundPath) { ForceSound = true });
             }
-            ImGui.SameLine(150);
 
+            ImGui.SameLine(150);
             ImGui.SetNextItemWidth(200);
             string customSoundPath = action.SoundPath;
             if (ImGui.InputText("##SoundPath" + action.RecastGroup, ref customSoundPath, 500))
@@ -591,6 +601,7 @@ namespace Oh_gee_CD
             {
                 action.TextToSpeechEnabled = ttsEnabled;
             }
+            DrawHelper.DrawHelpText("Enables Text to Speech.\n\nOnce the ability is off cooldown this plugin will say the text as set below: " + action.TextToSpeechName);
             ImGui.SetWindowFontScale(1);
             ImGui.Separator();
 
