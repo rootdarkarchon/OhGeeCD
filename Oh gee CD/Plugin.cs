@@ -8,6 +8,7 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using OhGeeCD.Managers;
 using OhGeeCD.UI;
+using OhGeeCD.Util;
 using System;
 
 namespace OhGeeCD
