@@ -1,24 +1,28 @@
 ﻿using Dalamud.Interface.Windowing;
 using ImGuiNET;
+using OhGeeCD.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace Oh_gee_CD
+namespace OhGeeCD.UI
 {
     public class OGCDBarUI : Window
     {
+        private const short DEFAULT_SIZE = 64;
         private readonly OGCDBar bar;
-        private readonly WindowSystem system;
-        private readonly PlayerManager playerManager;
         private readonly DrawHelper drawHelper;
+        private readonly PlayerConditionManager playerConditionState;
+        private readonly PlayerManager playerManager;
+        private readonly WindowSystem system;
 
-        public OGCDBarUI(OGCDBar bar, WindowSystem system, PlayerManager playerManager, DrawHelper drawHelper) : base("OGCDBarUI" + bar.Id)
+        public OGCDBarUI(OGCDBar bar, WindowSystem system, PlayerManager playerManager, PlayerConditionManager playerConditionState, DrawHelper drawHelper) : base("OGCDBarUI" + bar.Id)
         {
             this.bar = bar;
             this.system = system;
             this.playerManager = playerManager;
+            this.playerConditionState = playerConditionState;
             this.drawHelper = drawHelper;
             system.AddWindow(this);
             if (!IsOpen)
@@ -32,38 +36,18 @@ namespace Oh_gee_CD
             Flags |= ImGuiWindowFlags.NoMouseInputs;
         }
 
-        public override void PreDraw()
+        public void Dispose()
         {
-            base.PreDraw();
-            if (bar.InEditMode)
+            try
             {
-                Flags &= ~ImGuiWindowFlags.NoMove;
-                Flags &= ~ImGuiWindowFlags.NoBackground;
-                Flags &= ~ImGuiWindowFlags.NoMouseInputs;
-                ImGui.PushStyleColor(ImGuiCol.WindowBg, DrawHelper.Color(255, 0, 0, 255));
+                system.RemoveWindow(this);
             }
-            else
-            {
-                Flags |= ImGuiWindowFlags.NoMove;
-                Flags |= ImGuiWindowFlags.NoBackground;
-                Flags |= ImGuiWindowFlags.NoMouseInputs;
-            }
+            catch { }
         }
-
-        public override void PostDraw()
-        {
-            if (bar.InEditMode)
-            {
-                ImGui.PopStyleColor();
-            }
-            base.PostDraw();
-        }
-
-        private const short DEFAULT_SIZE = 64;
 
         public override void Draw()
         {
-            bool show = playerManager.ProcessingActive();
+            bool show = playerConditionState.ProcessingActive();
             show |= bar.InEditMode;
             if (show == false || IsOpen == false) return;
 
@@ -85,7 +69,7 @@ namespace Oh_gee_CD
 
             var jobActions = job.Actions.Where(j => j.DrawOnOGCDBar && j.Abilities.Any(a => a.IsAvailable)).ToArray();
             var barPositions = bar.JobRecastGroupIds.ContainsKey(job.Id) ? bar.JobRecastGroupIds[job.Id] : new List<byte>();
-            
+
             int x = 0;
             int y = 0;
 
@@ -126,9 +110,9 @@ namespace Oh_gee_CD
             ImGui.PushClipRect(position, new Vector2(position.X + size * 2,
                 position.Y + size * 2), false);
 
-            var iconToDraw = action.IconToDraw != 0 
+            var iconToDraw = action.IconToDraw != 0
                 && action.Abilities.Single(a => a.Icon == action.IconToDraw).IsAvailable
-                    ? action.IconToDraw 
+                    ? action.IconToDraw
                     : action.Abilities.Where(a => a.IsAvailable).OrderByDescending(a => a.RequiredJobLevel).First().Icon;
             drawHelper.DrawIconClipRect(drawList, iconToDraw, position, new Vector2(position.X + size, position.Y + size));
 
@@ -136,7 +120,7 @@ namespace Oh_gee_CD
             {
                 drawList.AddRectFilled(
                     new Vector2(position.X,
-                        position.Y + (size * (1 - ((float)(action.CooldownTimer / action.Recast.TotalSeconds))))),
+                        position.Y + size * (1 - (float)(action.CooldownTimer / action.Recast.TotalSeconds))),
                     new Vector2(position.X + size, position.Y + size),
                     DrawHelper.Color(255, 255, 255, 200), 5, ImDrawFlags.RoundCornersAll);
             }
@@ -150,8 +134,7 @@ namespace Oh_gee_CD
                 var textSize = ImGui.CalcTextSize(cooldownString);
                 uint fontColorText = action.CurrentCharges > 0 ? DrawHelper.Color(255, 255, 255, 255) : DrawHelper.Color(255, 0, 0, 255);
                 uint fontColorOutline = action.CurrentCharges > 0 ? DrawHelper.Color(255, 0, 0, 255) : DrawHelper.Color(0, 0, 0, 255);
-                Vector2 cornerPos = new Vector2(position.X + size - textSize.X * 0.8f, position.Y + size - (textSize.Y * 0.7f));
-
+                Vector2 cornerPos = new Vector2(position.X + size - textSize.X * 0.8f, position.Y + size - textSize.Y * 0.7f);
 
                 DrawHelper.DrawOutlinedFont(drawList, cooldownString, cornerPos, fontColorText, fontColorOutline, 2);
 
@@ -177,13 +160,31 @@ namespace Oh_gee_CD
             drawList.PopClipRect();
         }
 
-        public void Dispose()
+        public override void PostDraw()
         {
-            try
+            if (bar.InEditMode)
             {
-                system.RemoveWindow(this);
+                ImGui.PopStyleColor();
             }
-            catch { }
+            base.PostDraw();
+        }
+
+        public override void PreDraw()
+        {
+            base.PreDraw();
+            if (bar.InEditMode)
+            {
+                Flags &= ~ImGuiWindowFlags.NoMove;
+                Flags &= ~ImGuiWindowFlags.NoBackground;
+                Flags &= ~ImGuiWindowFlags.NoMouseInputs;
+                ImGui.PushStyleColor(ImGuiCol.WindowBg, DrawHelper.Color(255, 0, 0, 255));
+            }
+            else
+            {
+                Flags |= ImGuiWindowFlags.NoMove;
+                Flags |= ImGuiWindowFlags.NoBackground;
+                Flags |= ImGuiWindowFlags.NoMouseInputs;
+            }
         }
     }
 }

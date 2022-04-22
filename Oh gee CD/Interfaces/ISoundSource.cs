@@ -1,6 +1,7 @@
-﻿using System;
+﻿using OhGeeCD.Sound;
+using System;
 
-namespace Oh_gee_CD
+namespace OhGeeCD.Interfaces
 {
     public interface ISoundSource
     {

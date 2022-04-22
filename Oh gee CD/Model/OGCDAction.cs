@@ -1,51 +1,26 @@
 ﻿using Dalamud.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
+using OhGeeCD.Interfaces;
+using OhGeeCD.Sound;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Oh_gee_CD
+namespace OhGeeCD.Model
 {
     [Serializable]
     public class OGCDAction : IDisposable, ISoundSource
     {
-        [JsonProperty]
-        public byte RecastGroup { get; set; }
-        [JsonProperty]
-        public string TextToSpeechName { get; set; }
-        [JsonProperty]
-        public int SoundEffect { get; set; }
-        [JsonProperty]
-        public bool SoundEffectEnabled { get; set; } = false;
-        [JsonProperty]
-        public bool TextToSpeechEnabled { get; set; } = false;
-        public bool DrawOnOGCDBar { get; set; } = false;
-        [JsonProperty]
-        public double EarlyCallout { get; set; } = 0;
-        [JsonProperty]
-        public string SoundPath { get; set; } = string.Empty;
-        [JsonProperty]
-        public uint IconToDraw { get; set; } = 0;
+        private CancellationTokenSource cts;
 
-        [JsonIgnore]
-        public List<OGCDAbility> Abilities { get; set; } = new();
-        [JsonIgnore]
-        public TimeSpan Recast { get; set; }
-        [JsonIgnore]
-        public short MaxCharges { get; private set; }
-        [JsonIgnore]
-        public short CurrentCharges { get; private set; }
-        [JsonIgnore]
-        public double CooldownTimer { get; private set; }
-        [JsonIgnore]
-        public string AbilitiesNames => string.Join(" / ", Abilities.Select(a => a.Name));
         private uint currentJobLevel;
-        CancellationTokenSource cts;
 
-        public event EventHandler<SoundEventArgs>? SoundEvent;
+        private int soundsToPlay = 1;
+
+        private bool timerRunning = false;
 
         /// <summary>
         /// serialization constructor
@@ -68,6 +43,52 @@ namespace Oh_gee_CD
             cts = new CancellationTokenSource();
         }
 
+        public event EventHandler<SoundEventArgs>? SoundEvent;
+
+        [JsonIgnore]
+        public List<OGCDAbility> Abilities { get; set; } = new();
+
+        [JsonIgnore]
+        public string AbilitiesNames => string.Join(" / ", Abilities.Select(a => a.Name));
+
+        [JsonIgnore]
+        public double CooldownTimer { get; private set; }
+
+        [JsonIgnore]
+        public short CurrentCharges { get; private set; }
+
+        public bool DrawOnOGCDBar { get; set; } = false;
+
+        [JsonProperty]
+        public double EarlyCallout { get; set; } = 0;
+
+        [JsonProperty]
+        public uint IconToDraw { get; set; } = 0;
+
+        [JsonIgnore]
+        public short MaxCharges { get; private set; }
+
+        [JsonIgnore]
+        public TimeSpan Recast { get; set; }
+
+        [JsonProperty]
+        public byte RecastGroup { get; set; }
+
+        [JsonProperty]
+        public int SoundEffect { get; set; }
+
+        [JsonProperty]
+        public bool SoundEffectEnabled { get; set; } = false;
+
+        [JsonProperty]
+        public string SoundPath { get; set; } = string.Empty;
+
+        [JsonProperty]
+        public bool TextToSpeechEnabled { get; set; } = false;
+
+        [JsonProperty]
+        public string TextToSpeechName { get; set; }
+
         public void Debug()
         {
             foreach (var ability in Abilities)
@@ -76,13 +97,33 @@ namespace Oh_gee_CD
             }
         }
 
+        public void Dispose()
+        {
+            cts?.Cancel();
+        }
+
+        public void MakeActive(uint currentJobLevel)
+        {
+            this.currentJobLevel = currentJobLevel;
+            MaxCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, currentJobLevel);
+            CurrentCharges = MaxCharges;
+            foreach (var ability in Abilities)
+            {
+                ability.CurrentJobLevel = currentJobLevel;
+            }
+            cts?.Cancel();
+        }
+
+        public void MakeInactive()
+        {
+            cts?.Cancel();
+            cts = new CancellationTokenSource();
+        }
+
         public void SetTextToSpeechName(string newname)
         {
             TextToSpeechName = newname;
         }
-
-        private bool timerRunning = false;
-        private int soundsToPlay = 1;
 
         public unsafe void StartCountdown(ActionManager* actionManager)
         {
@@ -107,9 +148,9 @@ namespace Oh_gee_CD
                 bool cancelled = false;
                 do
                 {
-                    // reset early callout if the CooldownTimer is suddenly smaller than the new CooldownTimer 
+                    // reset early callout if the CooldownTimer is suddenly smaller than the new CooldownTimer
                     var curTimeElapsed = recastGroupDetail->Elapsed;
-                    var newCoolDown = ((Recast.TotalSeconds * MaxCharges - curTimeElapsed) % Recast.TotalSeconds);
+                    var newCoolDown = (Recast.TotalSeconds * MaxCharges - curTimeElapsed) % Recast.TotalSeconds;
                     resetEarlyCallout = resetEarlyCallout || CooldownTimer < newCoolDown;
                     CooldownTimer = newCoolDown;
 
@@ -141,7 +182,6 @@ namespace Oh_gee_CD
                     {
                         recastGroupDetail = actionManager->GetRecastGroupDetail(RecastGroup);
                     }
-
                 } while (recastGroupDetail->IsActive == 1 && !cancelled && CurrentCharges != MaxCharges);
 
                 CurrentCharges = MaxCharges;
@@ -156,36 +196,6 @@ namespace Oh_gee_CD
             }, cts.Token);
         }
 
-        private unsafe void PlaySound()
-        {
-            SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
-                SoundEffectEnabled ? SoundEffect : null,
-                SoundEffectEnabled ? SoundPath : null));
-        }
-
-        public void Dispose()
-        {
-            cts?.Cancel();
-        }
-
-        public void MakeInactive()
-        {
-            cts?.Cancel();
-            cts = new CancellationTokenSource();
-        }
-
-        public void MakeActive(uint currentJobLevel)
-        {
-            this.currentJobLevel = currentJobLevel;
-            MaxCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, currentJobLevel);
-            CurrentCharges = MaxCharges;
-            foreach (var ability in Abilities)
-            {
-                ability.CurrentJobLevel = currentJobLevel;
-            }
-            cts?.Cancel();
-        }
-
         public void UpdateValuesFromOtherAction(OGCDAction fittingActionFromConfig)
         {
             DrawOnOGCDBar = fittingActionFromConfig.DrawOnOGCDBar;
@@ -196,6 +206,13 @@ namespace Oh_gee_CD
             EarlyCallout = fittingActionFromConfig.EarlyCallout;
             SoundPath = fittingActionFromConfig.SoundPath;
             IconToDraw = fittingActionFromConfig.IconToDraw;
+        }
+
+        private unsafe void PlaySound()
+        {
+            SoundEvent?.Invoke(this, new SoundEventArgs(TextToSpeechEnabled ? TextToSpeechName : null,
+                SoundEffectEnabled ? SoundEffect : null,
+                SoundEffectEnabled ? SoundPath : null));
         }
     }
 }

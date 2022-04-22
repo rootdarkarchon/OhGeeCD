@@ -2,6 +2,7 @@
 using Dalamud.Utility.Signatures;
 using NAudio.Wave;
 using Newtonsoft.Json;
+using OhGeeCD.Interfaces;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -9,43 +10,42 @@ using System.Speech.Synthesis;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Oh_gee_CD
+namespace OhGeeCD.Sound
 {
     [Serializable]
     public unsafe class SoundManager : IDisposable
     {
-        public delegate long PlaySoundEffectDelegate(int a1, long a2, long a3, int a4);
+        private readonly PlayerConditionManager playerConditionState;
 
         [Signature("E8 ?? ?? ?? ?? 4D 39 BE ?? ?? ?? ??")]
         private readonly PlaySoundEffectDelegate PlayGameSoundEffect = null!;
-        private PlayerManager? playerManager;
+
         private SpeechSynthesizer speechSynthesizer;
-        [JsonProperty]
-        public int TTSVolume { get; set; } = 100;
 
-        [JsonProperty]
-        public string SelectedVoiceCulture { get; set; } = "en-US";
-
-        [JsonIgnore]
-        public ReadOnlyCollection<InstalledVoice> AvailableVoices { get; }
-
-        public SoundManager()
+        public SoundManager(PlayerConditionManager playerConditionState)
         {
             speechSynthesizer = new SpeechSynthesizer();
             speechSynthesizer.SetOutputToDefaultAudioDevice();
             AvailableVoices = speechSynthesizer.GetInstalledVoices();
             SetVoice(SelectedVoiceCulture);
             SignatureHelper.Initialise(this);
-            playerManager = null!;
+            this.playerConditionState = playerConditionState;
         }
 
-        public void SetVoice(string cultureInfo, SpeechSynthesizer? synthesizer = null)
+        public delegate long PlaySoundEffectDelegate(int a1, long a2, long a3, int a4);
+
+        [JsonIgnore]
+        public ReadOnlyCollection<InstalledVoice> AvailableVoices { get; }
+
+        [JsonProperty]
+        public string SelectedVoiceCulture { get; set; } = "en-US";
+
+        [JsonProperty]
+        public int TTSVolume { get; set; } = 100;
+
+        public void Dispose()
         {
-            SelectedVoiceCulture = cultureInfo;
-            if (synthesizer == null)
-                speechSynthesizer.SelectVoiceByHints(VoiceGender.NotSet, VoiceAge.NotSet, 0, new System.Globalization.CultureInfo(cultureInfo));
-            else
-                synthesizer.SelectVoiceByHints(VoiceGender.NotSet, VoiceAge.NotSet, 0, new System.Globalization.CultureInfo(cultureInfo));
+            speechSynthesizer.Dispose();
         }
 
         public void PlaySoundEffect(int soundEffect)
@@ -63,6 +63,15 @@ namespace Oh_gee_CD
             soundSource.SoundEvent += SoundEventTriggered;
         }
 
+        public void SetVoice(string cultureInfo, SpeechSynthesizer? synthesizer = null)
+        {
+            SelectedVoiceCulture = cultureInfo;
+            if (synthesizer == null)
+                speechSynthesizer.SelectVoiceByHints(VoiceGender.NotSet, VoiceAge.NotSet, 0, new System.Globalization.CultureInfo(cultureInfo));
+            else
+                synthesizer.SelectVoiceByHints(VoiceGender.NotSet, VoiceAge.NotSet, 0, new System.Globalization.CultureInfo(cultureInfo));
+        }
+
         public void UnregisterSoundSource(ISoundSource soundSource)
         {
             soundSource.SoundEvent -= SoundEventTriggered;
@@ -70,7 +79,7 @@ namespace Oh_gee_CD
 
         private void SoundEventTriggered(object? sender, SoundEventArgs e)
         {
-            if ((!playerManager?.ProcessingActive() ?? false) && !e.ForceSound) return;
+            if ((!playerConditionState?.ProcessingActive() ?? false) && !e.ForceSound) return;
 
             PluginLog.Debug("Playing " + e);
 
@@ -104,17 +113,6 @@ namespace Oh_gee_CD
                       }
                   }
               });
-
-        }
-
-        public void Dispose()
-        {
-            speechSynthesizer.Dispose();
-        }
-
-        internal void SetPlayerManager(PlayerManager playerManager)
-        {
-            this.playerManager = playerManager;
         }
     }
 }

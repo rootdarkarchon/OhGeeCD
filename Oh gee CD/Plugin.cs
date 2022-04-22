@@ -6,27 +6,22 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
+using OhGeeCD.Sound;
+using OhGeeCD.UI;
 using System;
 
-namespace Oh_gee_CD
+namespace OhGeeCD
 {
-    public unsafe sealed class Plugin : IDalamudPlugin
+    public sealed unsafe class Plugin : IDalamudPlugin
     {
-        public string Name => "Oh gee, CD";
-
         private const string commandName = "/pohgeecd";
-
-        private DalamudPluginInterface PluginInterface { get; init; }
-        private CommandManager CommandManager { get; init; }
-        public ClientState ClientState { get; }
-        public DataManager DataManager { get; }
-        private OhGeeCDConfiguration Configuration { get; init; }
-
-        private readonly PlayerManager playerManager;
-        private readonly SoundManager soundManager;
-        private readonly WindowSystem system;
         private readonly DrawHelper drawHelper;
-        private readonly SettingsUI settingsUI;
+        private readonly Framework framework;
+        private readonly PlayerConditionManager playerConditionManager;
+        private readonly WindowSystem system;
+        private PlayerManager playerManager;
+        private SettingsUI settingsUI;
+        private SoundManager soundManager;
 
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
@@ -38,52 +33,41 @@ namespace Oh_gee_CD
             CommandManager = commandManager;
             ClientState = clientState;
             DataManager = dataManager;
-            soundManager = new SoundManager();
+            this.framework = framework;
             drawHelper = new DrawHelper(dataManager);
             system = new WindowSystem("OhGeeCD");
+            playerConditionManager = new PlayerConditionManager(condition);
 
-            playerManager = new PlayerManager(framework, dataManager, clientState, soundManager, system, drawHelper, condition);
-            Configuration = PluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager);
-            Configuration.Initialize(PluginInterface);
-            settingsUI = new SettingsUI(playerManager, system, drawHelper);
+            clientState.Login += State_Login;
+            clientState.Logout += State_Logout;
 
-            commandManager.AddHandler(commandName, new CommandInfo(OnCommand) { HelpMessage = "Opens Oh gee, CD configuration" });
-
-            if (!clientState.IsLoggedIn)
-            {
-                clientState.Login += State_Login;
-            }
-            else
+            if (clientState.IsLoggedIn)
             {
                 State_Login(null, EventArgs.Empty);
             }
         }
 
-        private void State_Login(object? sender, EventArgs e)
-        {
-            playerManager.Initialize(Configuration);
-            Configuration.PlayerManager.Dispose();
-            Configuration.PlayerManager = playerManager;
-
-            PluginInterface.UiBuilder.Draw += DrawUI;
-            PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
-
-            Configuration.Save();
-        }
+        public ClientState ClientState { get; }
+        public DataManager DataManager { get; }
+        public string Name => "Oh gee, CD";
+        private CommandManager CommandManager { get; init; }
+        private OhGeeCDConfiguration Configuration { get; set; }
+        private DalamudPluginInterface PluginInterface { get; init; }
 
         public void Dispose()
         {
             Configuration.Save();
-            soundManager.UnregisterSoundSource(settingsUI);
 
             PluginInterface.UiBuilder.Draw -= DrawUI;
             PluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUI;
+
             CommandManager.RemoveHandler(commandName);
             playerManager.Dispose();
             settingsUI.Dispose();
+            soundManager.Dispose();
         }
 
-        private void OnCommand(string command, string args)
+        private void DrawConfigUI()
         {
             settingsUI.Toggle();
         }
@@ -93,9 +77,40 @@ namespace Oh_gee_CD
             system.Draw();
         }
 
-        private void DrawConfigUI()
+        private void OnCommand(string command, string args)
         {
             settingsUI.Toggle();
+        }
+
+        private void State_Login(object? sender, EventArgs e)
+        {
+            CommandManager.AddHandler(commandName, new CommandInfo(OnCommand) { HelpMessage = "Opens Oh gee, CD configuration" });
+            soundManager = new SoundManager(playerConditionManager);
+
+            var dataLoader = new DataLoader(DataManager);
+
+            playerManager = new PlayerManager(framework, dataLoader, ClientState, soundManager, system, drawHelper, playerConditionManager);
+            settingsUI = new SettingsUI(playerManager, soundManager, playerConditionManager, system, drawHelper);
+
+            Configuration = PluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager, soundManager, playerConditionManager);
+            Configuration.Initialize(PluginInterface);
+
+            Configuration.RestoreConfiguration(playerManager);
+            Configuration.RestoreConfiguration(playerConditionManager);
+            Configuration.RestoreConfiguration(soundManager);
+
+            playerManager.Initialize();
+            Configuration.DisposeAndUpdateWithNewEntities(playerManager, soundManager, playerConditionManager);
+
+            PluginInterface.UiBuilder.Draw += DrawUI;
+            PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+
+            Configuration.Save();
+        }
+
+        private void State_Logout(object? sender, EventArgs e)
+        {
+            Dispose();
         }
     }
 }
