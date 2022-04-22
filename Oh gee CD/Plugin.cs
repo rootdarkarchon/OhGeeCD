@@ -47,7 +47,7 @@ namespace Oh_gee_CD
             Configuration.Initialize(PluginInterface);
             settingsUI = new SettingsUI(playerManager, system, drawHelper);
 
-            commandManager.AddHandler(commandName, new CommandInfo(OnCommand));
+            commandManager.AddHandler(commandName, new CommandInfo(OnCommand) { HelpMessage = "Opens Oh gee, CD configuration" });
 
             if (!clientState.IsLoggedIn)
             {

@@ -6,7 +6,7 @@
     <Version>0.0.0.1</Version>
     <Description>Oh gee CD</Description>
     <Copyright></Copyright>
-    <PackageProjectUrl>https://github.com/goatcorp/SamplePlugin</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/rootdarkarchon/OhGeeCD</PackageProjectUrl>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -22,6 +22,7 @@
 
   <PropertyGroup>
     <DalamudLibPath>$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
+    <RepositoryUrl>https://github.com/rootdarkarchon/OhGeeCD</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
@@ -59,11 +60,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Oh gee CD.json">
+    <None Update="OhGeeCD.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="ohgeecd.png">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    <None Update="images\icon.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
