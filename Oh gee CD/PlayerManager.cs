@@ -209,13 +209,13 @@ namespace Oh_gee_CD
                 var jobinList = Jobs.FirstOrDefault(j => j.Abbreviation == job.ClassJobParent?.Value?.Abbreviation.RawString);
                 if (jobinList == null)
                 {
-                    var newJob = new Job(job.Abbreviation.RawString, job.ClassJobParent?.Value?.Abbreviation.RawString);
+                    var newJob = new Job(job.Abbreviation.RawString, job.ClassJobParent?.Value?.Abbreviation.RawString, job.Name.RawString, job.ClassJobParent?.Value?.Name.RawString);
                     newJob.SetLevel((uint)levels[job.ExpArrayIndex]);
                     Jobs.Add(newJob);
                 }
                 else
                 {
-                    jobinList.SetAbbreviation(job.Abbreviation.RawString);
+                    jobinList.SetAbbreviation(job.Abbreviation.RawString, job.Name.RawString);
                 }
             }
 

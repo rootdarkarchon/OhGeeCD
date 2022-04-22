@@ -13,6 +13,15 @@ namespace Oh_gee_CD
         public string Abbreviation { get; private set; }
 
         [JsonIgnore]
+        public string? Name { get; set; }
+
+        [JsonIgnore]
+        public string? ParentName { get; set; }
+
+        [JsonIgnore]
+        public string NameOrParentName => Name == ParentName ? Name! : $"{Name} / {ParentName}";
+
+        [JsonIgnore]
         public string? ParentAbbreviation { get; private set; }
 
         [JsonIgnore]
@@ -27,15 +36,18 @@ namespace Oh_gee_CD
             Level = level;
         }
 
-        public void SetAbbreviation(string abbreviation)
+        public void SetAbbreviation(string abbreviation, string name)
         {
             Abbreviation = abbreviation;
+            Name = NameToUpper(name);
         }
 
-        public Job(string name, string? parent = null)
+        public Job(string name, string? parent = null, string? jobname = null, string? parentJobName = null)
         {
             Abbreviation = name;
             ParentAbbreviation = parent;
+            Name = NameToUpper(jobname);
+            ParentName = NameToUpper(parentJobName);
         }
 
         [JsonProperty]
@@ -75,6 +87,12 @@ namespace Oh_gee_CD
             {
                 action.Dispose();
             }
+        }
+
+        private string NameToUpper(string? name)
+        {
+            if (name == null) return string.Empty;
+            return string.Join(" ", name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(s => s[0].ToString().ToUpper() + s.Substring(1)));
         }
     }
 }

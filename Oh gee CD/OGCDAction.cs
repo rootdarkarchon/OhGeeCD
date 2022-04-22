@@ -40,6 +40,8 @@ namespace Oh_gee_CD
         public short CurrentCharges { get; private set; }
         [JsonIgnore]
         public double CooldownTimer { get; private set; }
+        [JsonIgnore]
+        public string AbilitiesNames => string.Join(" / ", Abilities.Select(a => a.Name));
         private uint currentJobLevel;
         CancellationTokenSource cts;
 
