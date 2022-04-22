@@ -1,4 +1,4 @@
-﻿using OhGeeCD.Sound;
+﻿using OhGeeCD.Util;
 using System;
 
 namespace OhGeeCD.Interfaces

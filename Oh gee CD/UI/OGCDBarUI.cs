@@ -1,5 +1,6 @@
 ﻿using Dalamud.Interface.Windowing;
 using ImGuiNET;
+using OhGeeCD.Managers;
 using OhGeeCD.Model;
 using System;
 using System.Collections.Generic;

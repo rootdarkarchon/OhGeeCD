@@ -1,4 +1,4 @@
-﻿namespace OhGeeCD.Sound
+﻿namespace OhGeeCD.Util
 {
     public class SoundEventArgs
     {

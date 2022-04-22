@@ -1,27 +1,22 @@
 ﻿using Dalamud.Game;
 using Dalamud.Game.ClientState;
-using Dalamud.Hooking;
 using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
-using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using OhGeeCD.Model;
-using OhGeeCD.Sound;
 using OhGeeCD.UI;
+using OhGeeCD.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace OhGeeCD
+namespace OhGeeCD.Managers
 {
     [Serializable]
-    public unsafe class PlayerManager : IDisposable
+    public class PlayerManager : IDisposable
     {
-        [Signature("E8 ?? ?? ?? ?? 0F B7 0B 83 E9 64", DetourName = nameof(ActorControlSelf_Detour))]
-        private readonly Hook<ActorControlSelf>? actorControlSelfHook = null;
-
         private readonly ClientState clientState;
         private readonly PlayerConditionManager conditionState;
         private readonly DataLoader dataLoader;
@@ -64,21 +59,15 @@ namespace OhGeeCD
             this.system = system;
             this.helper = helper;
             this.conditionState = conditionState;
-            SignatureHelper.Initialise(this);
-            actorControlSelfHook?.Enable();
+            conditionState.WipeDetected += (_, _) => UpdateJobs();
         }
-
-        public delegate long PlaySoundEffectDelegate(int a1, long a2, long a3, int a4);
-
-        private delegate void ActorControlSelf(uint entityId, uint id, uint arg0, uint arg1, uint arg2, uint arg3, uint arg4, uint arg5, ulong targetId, byte a10);
 
         public List<Job> Jobs { get; set; } = new();
         public List<OGCDBar> OGCDBars { get; set; } = new();
 
         public void AddOGCDBar(OGCDBar bar)
         {
-            OGCDBarUI ui = new OGCDBarUI(bar, system, this, conditionState, helper);
-            bar.UI = ui;
+            bar.UI = new OGCDBarUI(bar, system, this, conditionState, helper);
             OGCDBars.Add(bar);
         }
 
@@ -92,14 +81,11 @@ namespace OhGeeCD
                     soundManager?.UnregisterSoundSource(action);
                 }
             }
-
             foreach (var bar in OGCDBars)
             {
                 PluginLog.Debug($"Disposing {bar.Name}, UI:{bar.UI != null}");
                 bar.Dispose();
             }
-
-            actorControlSelfHook?.Dispose();
 
             if (framework != null)
                 framework.Update -= Framework_Update;
@@ -127,15 +113,6 @@ namespace OhGeeCD
             var barID = bar.Id;
             OGCDBars.Remove(bar);
             return barID;
-        }
-
-        private void ActorControlSelf_Detour(uint entityId, uint id, uint arg0, uint arg1, uint arg2, uint arg3, uint arg4, uint arg5, ulong targetId, byte a10)
-        {
-            actorControlSelfHook?.Original(entityId, id, arg0, arg1, arg2, arg3, arg4, arg5, targetId, a10);
-            if (arg1 == 0x40000010) // check for 'fade in' aka "wipe" and reset
-            {
-                UpdateJobs();
-            }
         }
 
         private unsafe void CheckRecastGroups()

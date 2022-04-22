@@ -2,7 +2,7 @@
 using FFXIVClientStructs.FFXIV.Client.Game;
 using Newtonsoft.Json;
 using OhGeeCD.Interfaces;
-using OhGeeCD.Sound;
+using OhGeeCD.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;

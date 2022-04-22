@@ -1,8 +1,8 @@
 ﻿using Dalamud.Configuration;
 using Dalamud.Logging;
 using Dalamud.Plugin;
+using OhGeeCD.Managers;
 using OhGeeCD.Model;
-using OhGeeCD.Sound;
 using System;
 using System.Linq;
 
@@ -18,10 +18,10 @@ namespace OhGeeCD
         {
             PlayerManager = playerManager;
             SoundManager = soundManager;
-            PlayerConditionState = playerConditionState;
+            PlayerConditionManager = playerConditionState;
         }
 
-        public PlayerConditionManager PlayerConditionState { get; set; }
+        public PlayerConditionManager PlayerConditionManager { get; set; }
         public PlayerManager PlayerManager { get; set; }
         public SoundManager SoundManager { get; set; }
         public int Version { get; set; } = 0;
@@ -30,10 +30,11 @@ namespace OhGeeCD
         {
             PlayerManager?.Dispose();
             SoundManager?.Dispose();
+            PlayerConditionManager?.Dispose();
 
             PlayerManager = playerManager;
             SoundManager = soundManager;
-            PlayerConditionState = playerConditionManager;
+            PlayerConditionManager = playerConditionManager;
         }
 
         public void Initialize(DalamudPluginInterface pluginInterface)
@@ -49,9 +50,9 @@ namespace OhGeeCD
 
         public void RestoreConfiguration(PlayerConditionManager conditionState)
         {
-            conditionState.EnableInCombat = PlayerConditionState.EnableInCombat;
-            conditionState.EnableAlways = PlayerConditionState.EnableAlways;
-            conditionState.EnableInDuty = PlayerConditionState.EnableInDuty;
+            conditionState.EnableInCombat = PlayerConditionManager.EnableInCombat;
+            conditionState.EnableAlways = PlayerConditionManager.EnableAlways;
+            conditionState.EnableInDuty = PlayerConditionManager.EnableInDuty;
         }
 
         public void RestoreConfiguration(PlayerManager playerManager)

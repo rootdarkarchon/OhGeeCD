@@ -25,7 +25,7 @@ namespace OhGeeCD.Model
         public List<OGCDAction> Actions { get; set; } = new List<OGCDAction>();
 
         [JsonProperty]
-        public uint Id { get; }
+        public uint Id { get; set; }
 
         [JsonIgnore]
         public bool IsActive { get; private set; }

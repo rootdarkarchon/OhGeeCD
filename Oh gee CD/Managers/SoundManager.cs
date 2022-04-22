@@ -3,6 +3,7 @@ using Dalamud.Utility.Signatures;
 using NAudio.Wave;
 using Newtonsoft.Json;
 using OhGeeCD.Interfaces;
+using OhGeeCD.Util;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -10,7 +11,7 @@ using System.Speech.Synthesis;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace OhGeeCD.Sound
+namespace OhGeeCD.Managers
 {
     [Serializable]
     public unsafe class SoundManager : IDisposable

@@ -2,8 +2,9 @@
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
 using OhGeeCD.Interfaces;
+using OhGeeCD.Managers;
 using OhGeeCD.Model;
-using OhGeeCD.Sound;
+using OhGeeCD.Util;
 using System;
 using System.Linq;
 using System.Numerics;
@@ -702,7 +703,5 @@ namespace OhGeeCD.UI
                 DrawOGCDBar(manager.OGCDBars[selectedOGCDIndex]);
             ImGui.EndChild();
         }
-
-        //private Dictionary<byte, Vector2> itemSizes = new();
     }
 }

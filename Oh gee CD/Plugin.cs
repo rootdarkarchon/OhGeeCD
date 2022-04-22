@@ -6,7 +6,7 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
-using OhGeeCD.Sound;
+using OhGeeCD.Managers;
 using OhGeeCD.UI;
 using System;
 
@@ -15,13 +15,19 @@ namespace OhGeeCD
     public sealed unsafe class Plugin : IDalamudPlugin
     {
         private const string commandName = "/pohgeecd";
+        private readonly ClientState clientState;
+        private readonly CommandManager commandManager;
+        private readonly Condition condition;
+        private readonly DataManager dataManager;
         private readonly DrawHelper drawHelper;
         private readonly Framework framework;
-        private readonly PlayerConditionManager playerConditionManager;
+        private readonly DalamudPluginInterface pluginInterface;
         private readonly WindowSystem system;
-        private PlayerManager playerManager;
-        private SettingsUI settingsUI;
-        private SoundManager soundManager;
+        private OhGeeCDConfiguration? configuration;
+        private PlayerConditionManager? playerConditionManager;
+        private PlayerManager? playerManager;
+        private SettingsUI? settingsUI;
+        private SoundManager? soundManager;
 
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
@@ -29,14 +35,14 @@ namespace OhGeeCD
             ClientState clientState, DataManager dataManager,
             Framework framework, Condition condition)
         {
-            PluginInterface = pluginInterface;
-            CommandManager = commandManager;
-            ClientState = clientState;
-            DataManager = dataManager;
+            this.pluginInterface = pluginInterface;
+            this.commandManager = commandManager;
+            this.clientState = clientState;
+            this.dataManager = dataManager;
             this.framework = framework;
+            this.condition = condition;
             drawHelper = new DrawHelper(dataManager);
             system = new WindowSystem("OhGeeCD");
-            playerConditionManager = new PlayerConditionManager(condition);
 
             clientState.Login += State_Login;
             clientState.Logout += State_Logout;
@@ -47,29 +53,25 @@ namespace OhGeeCD
             }
         }
 
-        public ClientState ClientState { get; }
-        public DataManager DataManager { get; }
         public string Name => "Oh gee, CD";
-        private CommandManager CommandManager { get; init; }
-        private OhGeeCDConfiguration Configuration { get; set; }
-        private DalamudPluginInterface PluginInterface { get; init; }
 
         public void Dispose()
         {
-            Configuration.Save();
+            configuration?.Save();
 
-            PluginInterface.UiBuilder.Draw -= DrawUI;
-            PluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUI;
+            pluginInterface.UiBuilder.Draw -= DrawUI;
+            pluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUI;
 
-            CommandManager.RemoveHandler(commandName);
-            playerManager.Dispose();
-            settingsUI.Dispose();
-            soundManager.Dispose();
+            commandManager?.RemoveHandler(commandName);
+            playerManager?.Dispose();
+            settingsUI?.Dispose();
+            soundManager?.Dispose();
+            playerConditionManager?.Dispose();
         }
 
         private void DrawConfigUI()
         {
-            settingsUI.Toggle();
+            settingsUI?.Toggle();
         }
 
         private void DrawUI()
@@ -79,33 +81,32 @@ namespace OhGeeCD
 
         private void OnCommand(string command, string args)
         {
-            settingsUI.Toggle();
+            settingsUI?.Toggle();
         }
 
         private void State_Login(object? sender, EventArgs e)
         {
-            CommandManager.AddHandler(commandName, new CommandInfo(OnCommand) { HelpMessage = "Opens Oh gee, CD configuration" });
+            commandManager.AddHandler(commandName, new CommandInfo(OnCommand) { HelpMessage = "Opens Oh gee, CD configuration" });
+            playerConditionManager = new PlayerConditionManager(condition);
             soundManager = new SoundManager(playerConditionManager);
 
-            var dataLoader = new DataLoader(DataManager);
-
-            playerManager = new PlayerManager(framework, dataLoader, ClientState, soundManager, system, drawHelper, playerConditionManager);
+            playerManager = new PlayerManager(framework, new DataLoader(dataManager), clientState, soundManager, system, drawHelper, playerConditionManager);
             settingsUI = new SettingsUI(playerManager, soundManager, playerConditionManager, system, drawHelper);
 
-            Configuration = PluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager, soundManager, playerConditionManager);
-            Configuration.Initialize(PluginInterface);
-
-            Configuration.RestoreConfiguration(playerManager);
-            Configuration.RestoreConfiguration(playerConditionManager);
-            Configuration.RestoreConfiguration(soundManager);
-
             playerManager.Initialize();
-            Configuration.DisposeAndUpdateWithNewEntities(playerManager, soundManager, playerConditionManager);
 
-            PluginInterface.UiBuilder.Draw += DrawUI;
-            PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+            configuration = pluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager, soundManager, playerConditionManager);
+            configuration.Initialize(pluginInterface);
 
-            Configuration.Save();
+            configuration.RestoreConfiguration(playerManager);
+            configuration.RestoreConfiguration(playerConditionManager);
+            configuration.RestoreConfiguration(soundManager);
+            configuration.DisposeAndUpdateWithNewEntities(playerManager, soundManager, playerConditionManager);
+
+            pluginInterface.UiBuilder.Draw += DrawUI;
+            pluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+
+            configuration.Save();
         }
 
         private void State_Logout(object? sender, EventArgs e)
