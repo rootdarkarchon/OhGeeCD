@@ -351,6 +351,10 @@ namespace OhGeeCD.UI
                     if (ImGui.Selectable(bar.Name, inBar))
                     {
                         bar.AddOGCDAction(job, action);
+                        foreach(var otherbar in manager.OGCDBars.Where(b=>b.Id != bar.Id))
+                        {
+                            otherbar.RemoveOGCDAction(job, action);
+                        }
                     }
 
                     if (inBar)
