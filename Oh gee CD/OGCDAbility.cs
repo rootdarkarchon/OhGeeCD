@@ -3,10 +3,9 @@ using Newtonsoft.Json;
 
 namespace Oh_gee_CD
 {
-    [Serializable]
     public class OGCDAbility
     {
-        [JsonProperty]
+        [JsonIgnore]
         public uint Id { get; set; }
         [JsonIgnore]
         public uint Icon { get; set; }

@@ -84,7 +84,7 @@ namespace Oh_gee_CD
                 Flags |= ImGuiWindowFlags.NoMouseInputs;
             }
 
-            var jobActions = job.Actions.Where(j => j.OGCDBarId == bar.Id && j.DrawOnOGCDBar && j.Abilities.Any(a => a.IsAvailable)).ToArray();
+            var jobActions = job.Actions.Where(j => j.DrawOnOGCDBar && j.Abilities.Any(a => a.IsAvailable)).ToArray();
             var barPositions = bar.JobRecastGroupIds.ContainsKey(job.Abbreviation) ? bar.JobRecastGroupIds[job.Abbreviation] : new List<byte>();
             
             int x = 0;

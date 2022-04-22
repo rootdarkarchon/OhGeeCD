@@ -1,4 +1,5 @@
-﻿using Dalamud.Interface.Windowing;
+﻿using Dalamud.Interface;
+using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using ImGuiNET;
 using System;
@@ -243,24 +244,24 @@ namespace Oh_gee_CD
 
         private void DrawGeneralSettings()
         {
-            bool showAlways = manager.ShowAlways;
+            bool showAlways = manager.EnableAlways;
             if (ImGui.Checkbox("Enable always", ref showAlways))
             {
-                manager.ShowAlways = showAlways;
+                manager.EnableAlways = showAlways;
             }
             DrawHelper.DrawHelpText("Will show the OGCDBars always and always play sounds. Overrides Enable in duty and Enable in combat.");
 
-            bool showInDuty = manager.ShowInDuty;
+            bool showInDuty = manager.EnableInDuty;
             if (ImGui.Checkbox("Enable in duty", ref showInDuty))
             {
-                manager.ShowInDuty = showInDuty;
+                manager.EnableInDuty = showInDuty;
             }
             DrawHelper.DrawHelpText("Will show the OGCDBars in duty and play sounds in duty");
 
-            bool showInCombat = manager.ShowInCombat;
+            bool showInCombat = manager.EnableInCombat;
             if (ImGui.Checkbox("Enable in combat", ref showInCombat))
             {
-                manager.ShowInCombat = showInCombat;
+                manager.EnableInCombat = showInCombat;
             }
             DrawHelper.DrawHelpText("Will show the OGCDBars in combat and play sounds in combat");
 
@@ -288,7 +289,7 @@ namespace Oh_gee_CD
             }
         }
 
-        private void DrawJobsSettings()
+        private unsafe void DrawJobsSettings()
         {
             ImGui.BeginListBox("##Jobs", new Vector2(100, ImGui.GetContentRegionAvail().Y));
             int index = 0;
@@ -318,9 +319,15 @@ namespace Oh_gee_CD
             ImGui.Text(manager.Jobs[selectedJobIndex].Abbreviation + " / " + manager.Jobs[selectedJobIndex].ParentAbbreviation);
             ImGui.SetWindowFontScale(1.0f);
             ImGui.Separator();
-            foreach (var action in manager.Jobs[selectedJobIndex].Actions)
+            if (ImGui.BeginTable("jobTable", 1, ImGuiTableFlags.RowBg))
             {
-                DrawOGCDAction(manager.Jobs[selectedJobIndex], action);
+                foreach (var action in manager.Jobs[selectedJobIndex].Actions)
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    DrawOGCDAction(manager.Jobs[selectedJobIndex], action);
+                }
+                ImGui.EndTable();
             }
             ImGui.EndChild();
         }
@@ -525,31 +532,32 @@ namespace Oh_gee_CD
                     }
                 }
 
-                if (ImGui.BeginCombo("OGCD Bar##" + action.RecastGroup, action.OGCDBarId == 0 ? "None" : manager.OGCDBars.Single(a => a.Id == action.OGCDBarId).Name))
+                if (ImGui.BeginCombo("OGCD Bar##" + action.RecastGroup, 
+                    manager.OGCDBars.SingleOrDefault(a => a.JobRecastGroupIds.ContainsKey(job.Abbreviation) && a.JobRecastGroupIds[job.Abbreviation].Contains(action.RecastGroup))?.Name ?? "None"))
                 {
-                    if (ImGui.Selectable("None##" + action.RecastGroup, action.OGCDBarId == 0))
+                    var inBar = manager.OGCDBars.Any(bar => bar.JobRecastGroupIds.ContainsKey(job.Abbreviation) && bar.JobRecastGroupIds[job.Abbreviation].Contains(action.RecastGroup));
+                    if (ImGui.Selectable("None##" + action.RecastGroup, !inBar))
                     {
-                        foreach (var val in manager.OGCDBars)
+                        foreach (var bar in manager.OGCDBars)
                         {
-                            val.RemoveOGCDAction(job, action);
+                            bar.RemoveOGCDAction(job, action);
                         }
-                        //action.OGCDBarId = 0;
                     }
 
-                    if (action.OGCDBarId == 0)
+                    if (inBar)
                     {
                         ImGui.SetItemDefaultFocus();
                     }
 
-                    foreach (var item in manager.OGCDBars)
+                    foreach (var bar in manager.OGCDBars)
                     {
-                        if (ImGui.Selectable(item.Name, action.OGCDBarId == item.Id))
+                        inBar = bar.JobRecastGroupIds.ContainsKey(job.Abbreviation) && bar.JobRecastGroupIds[job.Abbreviation].Contains(action.RecastGroup);
+                        if (ImGui.Selectable(bar.Name, inBar))
                         {
-                            item.AddOGCDAction(job, action);
-                            //action.OGCDBarId = item.Id;
+                            bar.AddOGCDAction(job, action);
                         }
 
-                        if (item.Id == action.OGCDBarId)
+                        if (inBar)
                         {
                             ImGui.SetItemDefaultFocus();
                         }

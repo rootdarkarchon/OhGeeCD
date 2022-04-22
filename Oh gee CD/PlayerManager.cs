@@ -29,8 +29,11 @@ namespace Oh_gee_CD
         private readonly DrawHelper helper;
         private readonly Dalamud.Game.ClientState.Conditions.Condition condition;
 
+        [JsonIgnore]
         public bool CutsceneActive => condition[ConditionFlag.OccupiedInCutSceneEvent] || condition[ConditionFlag.WatchingCutscene78];
+        [JsonIgnore]
         public bool InCombat => condition[ConditionFlag.InCombat];
+        [JsonIgnore]
         public bool InDuty => condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56] || condition[ConditionFlag.BoundByDuty95] || condition[ConditionFlag.BoundToDuty97];
 
         public delegate long PlaySoundEffectDelegate(int a1, long a2, long a3, int a4);
@@ -42,11 +45,11 @@ namespace Oh_gee_CD
         [JsonProperty]
         public SoundManager SoundManager { get; init; }
         [JsonProperty]
-        public bool ShowInCombat { get; set; } = true;
+        public bool EnableInCombat { get; set; } = true;
         [JsonProperty]
-        public bool ShowAlways { get; set; } = false;
+        public bool EnableAlways { get; set; } = false;
         [JsonProperty]
-        public bool ShowInDuty { get; set; } = false;
+        public bool EnableInDuty { get; set; } = false;
         public List<Job> Jobs { get; set; } = new();
         public List<OGCDBar> OGCDBars { get; set; } = new();
         private string lastJob = string.Empty;
@@ -55,9 +58,9 @@ namespace Oh_gee_CD
         public bool ProcessingActive()
         {
             bool show = false;
-            show |= ShowAlways;
-            show |= ShowInCombat && InCombat;
-            show |= ShowInDuty && InDuty;
+            show |= EnableAlways;
+            show |= EnableInCombat && InCombat;
+            show |= EnableInDuty && InDuty;
             show &= !CutsceneActive;
             return show;
         }
@@ -175,10 +178,28 @@ namespace Oh_gee_CD
 
         public unsafe void Initialize(OhGeeCDConfiguration configuration)
         {
+            LoadDataFromLumina();
+
+            RestoreConfiguration(configuration);
+
+            framework.Update += Framework_Update;
+            clientState.TerritoryChanged += ClientState_TerritoryChanged;
+
+            foreach (var job in Jobs)
+            {
+                //job.Debug();
+            }
+
+            initialized = true;
+        }
+
+        private void LoadDataFromLumina()
+        {
             Resolver.Initialize();
             var levels = UIState.Instance()->PlayerState.ClassJobLevelArray;
 
             Jobs = new List<Job>();
+
 
             var classJobs = dataManager.Excel.GetSheet<ClassJob>();
             for (uint i = 0; i < classJobs.RowCount; i++)
@@ -261,18 +282,6 @@ namespace Oh_gee_CD
                     }
                 }
             }
-
-            RestoreDataFromConfiguration(configuration);
-
-            framework.Update += Framework_Update;
-            clientState.TerritoryChanged += ClientState_TerritoryChanged;
-
-            foreach (var job in Jobs)
-            {
-                //job.Debug();
-            }
-
-            initialized = true;
         }
 
         private void ClientState_TerritoryChanged(object? sender, ushort e)
@@ -284,10 +293,10 @@ namespace Oh_gee_CD
             });
         }
 
-        private void RestoreDataFromConfiguration(OhGeeCDConfiguration configuration)
+        private void RestoreConfiguration(OhGeeCDConfiguration configuration)
         {
             PluginLog.Debug("Restoring configuration");
-            foreach (var job in configuration.LoadedPlayerManager.Jobs)
+            foreach (var job in configuration.PlayerManager.Jobs)
             {
                 var initJob = Jobs.First(j => j.Abbreviation == job.Abbreviation);
                 foreach (var action in initJob.Actions)
@@ -298,19 +307,19 @@ namespace Oh_gee_CD
                 }
             }
 
-            foreach (var bar in configuration.LoadedPlayerManager.OGCDBars)
+            foreach (var bar in configuration.PlayerManager.OGCDBars)
             {
                 AddOGCDBar((OGCDBar)bar.Clone());
             }
 
-            ShowInCombat = configuration.LoadedPlayerManager.ShowInCombat;
-            ShowAlways = configuration.LoadedPlayerManager.ShowAlways;
-            ShowInDuty = configuration.LoadedPlayerManager.ShowInDuty;
+            EnableInCombat = configuration.PlayerManager.EnableInCombat;
+            EnableAlways = configuration.PlayerManager.EnableAlways;
+            EnableInDuty = configuration.PlayerManager.EnableInDuty;
 
-            var ttsVolume = configuration.LoadedPlayerManager.SoundManager?.TTSVolume;
+            var ttsVolume = configuration.PlayerManager.SoundManager?.TTSVolume;
             PluginLog.Debug("TTS Volume: " + ttsVolume);
-            SoundManager.TTSVolume = configuration.LoadedPlayerManager.SoundManager?.TTSVolume ?? 100;
-            SoundManager.SelectedVoiceCulture = configuration.LoadedPlayerManager.SoundManager?.SelectedVoiceCulture ?? "en-US";
+            SoundManager.TTSVolume = configuration.PlayerManager.SoundManager?.TTSVolume ?? 100;
+            SoundManager.SelectedVoiceCulture = configuration.PlayerManager.SoundManager?.SelectedVoiceCulture ?? "en-US";
             SoundManager.SetPlayerManager(this);
         }
 
@@ -325,13 +334,6 @@ namespace Oh_gee_CD
         {
             var barID = bar.Id;
             OGCDBars.Remove(bar);
-            foreach (var action in Jobs.SelectMany(j => j.Actions))
-            {
-                if (action.OGCDBarId == barID)
-                {
-                    action.OGCDBarId = 0;
-                }
-            }
             return barID;
         }
 

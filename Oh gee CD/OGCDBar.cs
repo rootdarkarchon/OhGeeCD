@@ -59,7 +59,7 @@ namespace Oh_gee_CD
                 JobRecastGroupIds.Add(job.Abbreviation, new List<byte>());
             }
 
-            action.OGCDBarId = Id;
+            //action.OGCDBarId = Id;
             if (!JobRecastGroupIds[job.Abbreviation].Contains(action.RecastGroup))
                 JobRecastGroupIds[job.Abbreviation].Add(action.RecastGroup);
         }
@@ -68,7 +68,7 @@ namespace Oh_gee_CD
         {
             if (!JobRecastGroupIds.ContainsKey((job.Abbreviation))) return;
 
-            action.OGCDBarId = 0;
+            //action.OGCDBarId = 0;
             JobRecastGroupIds[job.Abbreviation].Remove(action.RecastGroup);
         }
 

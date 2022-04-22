@@ -26,7 +26,7 @@ namespace Oh_gee_CD
         private readonly SoundManager soundManager;
         private readonly WindowSystem system;
         private readonly DrawHelper drawHelper;
-        private readonly SettingsUI ui;
+        private readonly SettingsUI settingsUI;
 
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
@@ -45,7 +45,7 @@ namespace Oh_gee_CD
             playerManager = new PlayerManager(framework, dataManager, clientState, soundManager, system, drawHelper, condition);
             Configuration = PluginInterface.GetPluginConfig() as OhGeeCDConfiguration ?? new OhGeeCDConfiguration(playerManager);
             Configuration.Initialize(PluginInterface);
-            ui = new SettingsUI(playerManager, system, drawHelper);
+            settingsUI = new SettingsUI(playerManager, system, drawHelper);
 
             commandManager.AddHandler(commandName, new CommandInfo(OnCommand));
 
@@ -62,8 +62,8 @@ namespace Oh_gee_CD
         private void State_Login(object? sender, EventArgs e)
         {
             playerManager.Initialize(Configuration);
-            Configuration.LoadedPlayerManager.Dispose();
-            Configuration.LoadedPlayerManager = playerManager;
+            Configuration.PlayerManager.Dispose();
+            Configuration.PlayerManager = playerManager;
 
             PluginInterface.UiBuilder.Draw += DrawUI;
             PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
@@ -74,18 +74,18 @@ namespace Oh_gee_CD
         public void Dispose()
         {
             Configuration.Save();
-            soundManager.UnregisterSoundSource(ui);
+            soundManager.UnregisterSoundSource(settingsUI);
 
             PluginInterface.UiBuilder.Draw -= DrawUI;
             PluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUI;
             CommandManager.RemoveHandler(commandName);
             playerManager.Dispose();
-            ui.Dispose();
+            settingsUI.Dispose();
         }
 
         private void OnCommand(string command, string args)
         {
-            ui.Toggle();
+            settingsUI.Toggle();
         }
 
         private void DrawUI()
@@ -95,7 +95,7 @@ namespace Oh_gee_CD
 
         private void DrawConfigUI()
         {
-            ui.Toggle();
+            settingsUI.Toggle();
         }
     }
 }

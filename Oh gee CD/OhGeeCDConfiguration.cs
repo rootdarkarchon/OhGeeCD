@@ -9,14 +9,14 @@ namespace Oh_gee_CD
     {
         public OhGeeCDConfiguration(PlayerManager playerManager)
         {
-            LoadedPlayerManager = playerManager;
+            PlayerManager = playerManager;
         }
 
         public int Version { get; set; } = 0;
 
         [NonSerialized]
         private DalamudPluginInterface? pluginInterface;
-        public PlayerManager LoadedPlayerManager { get; set; }
+        public PlayerManager PlayerManager { get; set; }
 
         public void Initialize(DalamudPluginInterface pluginInterface)
         {

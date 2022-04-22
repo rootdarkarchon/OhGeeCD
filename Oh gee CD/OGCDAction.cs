@@ -14,9 +14,6 @@ namespace Oh_gee_CD
     {
         [JsonProperty]
         public byte RecastGroup { get; set; }
-        public List<OGCDAbility> Abilities { get; set; } = new();
-        [JsonProperty]
-        public int OGCDBarId { get; set; } = 0;
         [JsonProperty]
         public string TextToSpeechName { get; set; }
         [JsonProperty]
@@ -33,6 +30,8 @@ namespace Oh_gee_CD
         [JsonProperty]
         public uint IconToDraw { get; set; } = 0;
 
+        [JsonIgnore]
+        public List<OGCDAbility> Abilities { get; set; } = new();
         [JsonIgnore]
         public TimeSpan Recast { get; set; }
         [JsonIgnore]
@@ -187,7 +186,6 @@ namespace Oh_gee_CD
 
         public void UpdateValuesFromOtherAction(OGCDAction fittingActionFromConfig)
         {
-            OGCDBarId = fittingActionFromConfig.OGCDBarId;
             DrawOnOGCDBar = fittingActionFromConfig.DrawOnOGCDBar;
             SoundEffect = fittingActionFromConfig.SoundEffect;
             SoundEffectEnabled = fittingActionFromConfig.SoundEffectEnabled;
