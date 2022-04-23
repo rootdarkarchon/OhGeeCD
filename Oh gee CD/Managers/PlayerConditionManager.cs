@@ -43,6 +43,9 @@ namespace OhGeeCD.Managers
         [JsonIgnore]
         public bool InDuty => condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56] || condition[ConditionFlag.BoundByDuty95] || condition[ConditionFlag.BoundToDuty97];
 
+        [JsonIgnore]
+        public bool InPvP => condition[ConditionFlag.PvPDisplayActive];
+
         public void Dispose()
         {
             actorControlSelfHook?.Dispose();
@@ -55,6 +58,7 @@ namespace OhGeeCD.Managers
             show |= EnableInCombat && InCombat;
             show |= EnableInDuty && InDuty;
             show &= !CutsceneActive;
+            show &= !InPvP;
             return show;
         }
 

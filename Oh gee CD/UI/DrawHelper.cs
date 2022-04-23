@@ -1,6 +1,8 @@
 ﻿using Dalamud.Data;
 using ImGuiNET;
 using ImGuiScene;
+using Lumina.Data.Files;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -15,6 +17,8 @@ namespace OhGeeCD.UI
         {
             this.dataManager = dataManager;
         }
+
+        public static float DegreesToRadians(double degrees) => (float)(Math.PI / 180 * degrees);
 
         public static uint Color(Vector4 color) => Color((byte)(color.X * 255), (byte)(color.Y * 255), (byte)(color.Z * 255), (byte)(color.W * 255));
 
@@ -67,7 +71,7 @@ namespace OhGeeCD.UI
             }
             else
             {
-                hqicon = dataManager.GetImGuiTextureHqIcon(icon);
+                hqicon = GetImGuiTextureHqIcon(icon);
                 if (hqicon == null) return;
                 textures.Add(icon, hqicon);
             }
@@ -79,6 +83,13 @@ namespace OhGeeCD.UI
             }
         }
 
+        private TextureWrap? GetImGuiTextureHqIcon(uint iconId)
+        {
+            var filePath = string.Format("ui/icon/{0:D3}000/{1:D6}_hr1.tex", iconId / 1000, iconId);
+            var file = dataManager.GetFile<TexFile>(filePath);
+            return dataManager.GetImGuiTexture(file);
+        }
+
         public void DrawIconClipRect(ImDrawListPtr ptr, uint icon, Vector2 p1, Vector2 p2)
         {
             TextureWrap? hqicon;
@@ -88,12 +99,12 @@ namespace OhGeeCD.UI
             }
             else
             {
-                hqicon = dataManager.GetImGuiTextureHqIcon(icon);
+                hqicon = GetImGuiTextureHqIcon(icon);
                 if (hqicon == null) return;
                 textures.Add(icon, hqicon);
             }
 
-            ptr.AddImage(hqicon.ImGuiHandle, p1, p2);
+            ptr.AddImage(hqicon.ImGuiHandle, p1, p2, new Vector2(1 - 76 / 80f, 1 - 76 / 80f), new Vector2(76 / 80f, 76 / 80f));
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Dalamud.Interface.Windowing;
+using Dalamud.Logging;
 using ImGuiNET;
 using OhGeeCD.Managers;
 using OhGeeCD.Model;
@@ -14,7 +15,7 @@ namespace OhGeeCD.UI
         private const short DEFAULT_SIZE = 64;
         private readonly OGCDBar bar;
         private readonly DrawHelper drawHelper;
-        private readonly PlayerConditionManager playerConditionState;
+        private readonly PlayerConditionManager playerConditionManager;
         private readonly PlayerManager playerManager;
         private readonly WindowSystem system;
 
@@ -23,7 +24,7 @@ namespace OhGeeCD.UI
             this.bar = bar;
             this.system = system;
             this.playerManager = playerManager;
-            this.playerConditionState = playerConditionState;
+            this.playerConditionManager = playerConditionState;
             this.drawHelper = drawHelper;
             system.AddWindow(this);
             if (!IsOpen)
@@ -48,9 +49,9 @@ namespace OhGeeCD.UI
 
         public override void Draw()
         {
-            bool show = playerConditionState.ProcessingActive();
+            bool show = playerConditionManager.ProcessingActive();
             show |= bar.InEditMode;
-            if (show == false || IsOpen == false) return;
+            if (show == false) return;
 
             var job = playerManager.Jobs.SingleOrDefault(j => j.IsActive);
             if (job == null) return;
@@ -82,8 +83,8 @@ namespace OhGeeCD.UI
                 if (action == null) continue;
 
                 DrawOGCD(action, new Vector2(
-                    ImGui.GetWindowContentRegionMin().X + iconSize * x + bar.HorizontalPadding * x,
-                    ImGui.GetWindowContentRegionMin().Y + iconSize * y + bar.VerticalPadding * y),
+                    ImGui.GetWindowContentRegionMin().X + (iconSize * x) + (bar.HorizontalPadding * x),
+                    ImGui.GetWindowContentRegionMin().Y + (iconSize * y) + (bar.VerticalPadding * y)),
                     iconSize);
                 if (bar.HorizontalLayout == OGCDBarHorizontalLayout.LeftToRight)
                     x++;
@@ -108,22 +109,42 @@ namespace OhGeeCD.UI
             var drawList = ImGui.GetWindowDrawList();
             position = new Vector2(ImGui.GetWindowPos().X + position.X, ImGui.GetWindowPos().Y + position.Y);
 
-            ImGui.PushClipRect(position, new Vector2(position.X + size * 2,
-                position.Y + size * 2), false);
+            ImGui.PushClipRect(position, new Vector2(position.X + (size * 2),
+                position.Y + (size * 2)), false);
 
             var iconToDraw = action.IconToDraw != 0
                 && action.Abilities.Single(a => a.Icon == action.IconToDraw).IsAvailable
                     ? action.IconToDraw
                     : action.Abilities.Where(a => a.IsAvailable).OrderByDescending(a => a.RequiredJobLevel).First().Icon;
+
+            // draw icon
             drawHelper.DrawIconClipRect(drawList, iconToDraw, position, new Vector2(position.X + size, position.Y + size));
+
+            // add border
+            drawList.PathLineTo(new Vector2(position.X + 1, position.Y + 1));
+            drawList.PathLineTo(new Vector2(position.X + size, position.Y + 1));
+            drawList.PathLineTo(new Vector2(position.X + size, position.Y + size));
+            drawList.PathLineTo(new Vector2(position.X + 1, position.Y + size));
+            drawList.PathStroke(DrawHelper.Color(0, 0, 0, 255), ImDrawFlags.Closed, 2);
 
             if ((int)action.CooldownTimer > 0)
             {
-                drawList.AddRectFilled(
-                    new Vector2(position.X,
-                        position.Y + size * (1 - (float)(action.CooldownTimer / action.Recast.TotalSeconds))),
-                    new Vector2(position.X + size, position.Y + size),
-                    DrawHelper.Color(255, 255, 255, 200), 5, ImDrawFlags.RoundCornersAll);
+                var res = (float)(1 - ((float)(action.CooldownTimer / action.Recast.TotalSeconds))) * 360;
+
+                drawList.PushClipRect(position, new Vector2(position.X + size, position.Y + size), false);
+                drawList.PathLineTo(new Vector2(position.X + (size / 2), position.Y + (size / 2)));
+                drawList.PathArcTo(new Vector2(position.X + (size / 2), position.Y + (size / 2)), size,
+                    DrawHelper.DegreesToRadians(res - 90),
+                    DrawHelper.DegreesToRadians(270));
+                drawList.PathLineTo(new Vector2(position.X + (size / 2), position.Y + (size / 2)));
+
+                drawList.PathFillConvex(DrawHelper.Color(0, 0, 0, 200));
+
+                drawList.PathArcTo(new Vector2(position.X + (size / 2), position.Y + (size / 2)), (size / 2) - 2,
+                    DrawHelper.DegreesToRadians(-90),
+                    DrawHelper.DegreesToRadians(res - 90));
+                drawList.PathStroke(DrawHelper.Color(255, 255, 255, 255), ImDrawFlags.None, 2);
+                drawList.PopClipRect();
             }
 
             if (action.MaxCharges > 1)
@@ -135,7 +156,7 @@ namespace OhGeeCD.UI
                 var textSize = ImGui.CalcTextSize(cooldownString);
                 uint fontColorText = action.CurrentCharges > 0 ? DrawHelper.Color(255, 255, 255, 255) : DrawHelper.Color(255, 0, 0, 255);
                 uint fontColorOutline = action.CurrentCharges > 0 ? DrawHelper.Color(255, 0, 0, 255) : DrawHelper.Color(0, 0, 0, 255);
-                Vector2 cornerPos = new Vector2(position.X + size - textSize.X * 0.8f, position.Y + size - textSize.Y * 0.7f);
+                Vector2 cornerPos = new Vector2(position.X + size - (textSize.X * 0.8f), position.Y + size - (textSize.Y * 0.7f));
 
                 DrawHelper.DrawOutlinedFont(drawList, cooldownString, cornerPos, fontColorText, fontColorOutline, 2);
 
@@ -151,7 +172,7 @@ namespace OhGeeCD.UI
                 var textSize = ImGui.CalcTextSize(cooldownString);
                 uint fontColorText = DrawHelper.Color(255, 255, 255, 255);
                 uint fontColorOutline = DrawHelper.Color(0, 0, 0, 255);
-                Vector2 centerPos = new Vector2(position.X + size / 2 - textSize.X / 2, position.Y + size / 2 - textSize.Y / 2);
+                Vector2 centerPos = new Vector2(position.X + (size / 2) - (textSize.X / 2), position.Y + (size / 2) - (textSize.Y / 2));
 
                 DrawHelper.DrawOutlinedFont(drawList, cooldownString, centerPos, fontColorText, fontColorOutline, 2);
 
