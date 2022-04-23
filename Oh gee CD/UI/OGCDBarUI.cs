@@ -17,17 +17,17 @@ namespace OhGeeCD.UI
         private readonly PlayerConditionManager playerConditionManager;
         private readonly PlayerManager playerManager;
 
-        private readonly Dictionary<int, int> SpreadAroundCenterPositions = new Dictionary<int, int>()
+        private readonly Dictionary<int, int> SpreadAroundCenterPositions = new()
         {
             {0, 0}, {1, 1}, {2, -1}, {3, 2}, {4, -2}, {5, 3}, {6, -3}, {7, 4}, {8, -4}, {9, 5}
         };
 
-        private readonly Dictionary<int, int> SpreadLeftToRightOrTopToBottomPositions = new Dictionary<int, int>()
+        private readonly Dictionary<int, int> SpreadLeftToRightOrTopToBottomPositions = new()
         {
             {0, 0}, {1,1}, {2,2}, {3,3}, {4, 4}, {5, 5}, {6,6}, {7, 7}, {8, 8}, {9, 9}
         };
 
-        private readonly Dictionary<int, int> SpreadRightToLeftOrBottomToTopPositions = new Dictionary<int, int>()
+        private readonly Dictionary<int, int> SpreadRightToLeftOrBottomToTopPositions = new()
         {
             {0, 0}, {1,-1}, {2,-2}, {3,-3}, {4, -4}, {5, -5}, {6,-6}, {7, -7}, {8, -8}, {9, -9}
         };
@@ -173,7 +173,7 @@ namespace OhGeeCD.UI
                 var textSize = ImGui.CalcTextSize(cooldownString);
                 uint fontColorText = action.CurrentCharges > 0 ? DrawHelper.Color(255, 255, 255, 255) : DrawHelper.Color(255, 0, 0, 255);
                 uint fontColorOutline = action.CurrentCharges > 0 ? DrawHelper.Color(255, 0, 0, 255) : DrawHelper.Color(0, 0, 0, 255);
-                Vector2 cornerPos = new Vector2(position.X + size - (textSize.X * 0.8f), position.Y + size - (textSize.Y * 0.7f));
+                Vector2 cornerPos = new(position.X + size - (textSize.X * 0.8f), position.Y + size - (textSize.Y * 0.7f));
 
                 DrawHelper.DrawOutlinedFont(drawList, cooldownString, cornerPos, fontColorText, fontColorOutline, 2);
 
@@ -189,7 +189,7 @@ namespace OhGeeCD.UI
                 var textSize = ImGui.CalcTextSize(cooldownString);
                 uint fontColorText = DrawHelper.Color(255, 255, 255, 255);
                 uint fontColorOutline = DrawHelper.Color(0, 0, 0, 255);
-                Vector2 centerPos = new Vector2(position.X + (size / 2) - (textSize.X / 2), position.Y + (size / 2) - (textSize.Y / 2));
+                Vector2 centerPos = new(position.X + (size / 2) - (textSize.X / 2), position.Y + (size / 2) - (textSize.Y / 2));
 
                 DrawHelper.DrawOutlinedFont(drawList, cooldownString, centerPos, fontColorText, fontColorOutline, 2);
 

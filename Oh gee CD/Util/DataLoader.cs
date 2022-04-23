@@ -70,7 +70,7 @@ namespace OhGeeCD.Util
                             }
                             else
                             {
-                                OGCDAction ogcdaction = new OGCDAction(new OGCDAbility(i, action.Icon, action.Name.RawString, action.ClassJobLevel, job.Level, action.IsRoleAction),
+                                OGCDAction ogcdaction = new(new OGCDAbility(i, action.Icon, action.Name.RawString, action.ClassJobLevel, job.Level, action.IsRoleAction),
                                     TimeSpan.FromSeconds(action.Recast100ms / 10), (byte)(action.CooldownGroup - 1), job.Level);
                                 job.Actions.Add(ogcdaction);
                             }
