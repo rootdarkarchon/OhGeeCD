@@ -56,11 +56,12 @@ namespace OhGeeCD.UI
                 var allBars = playerManager.OGCDBars.Where(b => b.JobRecastGroupIds.ContainsKey(activeJob.Id)
                     && (b.JobRecastGroupIds[activeJob.Id]?.Any(j => activeJob.Actions.Where(j => j.Visualize).Select(a => a.RecastGroup).Contains(j)) ?? false))
                     .ToList();
-                if (!allBars.Any()) return;
 
                 var actionsNotOnBar = activeJob.Actions.Where(a => a.Visualize
                     && !allBars.Where(b => b.JobRecastGroupIds.ContainsKey(activeJob.Id))
                     .SelectMany(b => b.JobRecastGroupIds[activeJob.Id]).Contains(a.RecastGroup)).ToList();
+
+                if (!allBars.Any() && !actionsNotOnBar.Any()) return;
 
                 if (actionsNotOnBar.Any())
                 {
@@ -146,16 +147,6 @@ namespace OhGeeCD.UI
             }
         }
 
-        private static void DrawLine(float xMinPos, float xMaxPos, float yCenterPos, ImDrawListPtr drawList)
-        {
-            drawList.PathLineTo(new System.Numerics.Vector2(xMinPos, yCenterPos));
-            drawList.PathLineTo(new System.Numerics.Vector2(xMaxPos, yCenterPos));
-            drawList.PathStroke(DrawHelper.Color(0, 0, 0, 120), ImDrawFlags.None, 2);
-            drawList.PathLineTo(new System.Numerics.Vector2(xMinPos, yCenterPos + 2));
-            drawList.PathLineTo(new System.Numerics.Vector2(xMaxPos, yCenterPos + 2));
-            drawList.PathStroke(DrawHelper.Color(255, 255, 255, 120), ImDrawFlags.None, 2);
-        }
-
         public override void PreDraw()
         {
             base.PreDraw();
@@ -171,6 +162,16 @@ namespace OhGeeCD.UI
                 Flags |= ImGuiWindowFlags.NoBackground;
                 Flags |= ImGuiWindowFlags.NoMouseInputs;
             }
+        }
+
+        private static void DrawLine(float xMinPos, float xMaxPos, float yCenterPos, ImDrawListPtr drawList)
+        {
+            drawList.PathLineTo(new System.Numerics.Vector2(xMinPos, yCenterPos));
+            drawList.PathLineTo(new System.Numerics.Vector2(xMaxPos, yCenterPos));
+            drawList.PathStroke(DrawHelper.Color(0, 0, 0, 120), ImDrawFlags.None, 2);
+            drawList.PathLineTo(new System.Numerics.Vector2(xMinPos, yCenterPos + 2));
+            drawList.PathLineTo(new System.Numerics.Vector2(xMaxPos, yCenterPos + 2));
+            drawList.PathStroke(DrawHelper.Color(255, 255, 255, 120), ImDrawFlags.None, 2);
         }
     }
 }

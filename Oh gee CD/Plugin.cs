@@ -10,7 +10,6 @@ using OhGeeCD.Managers;
 using OhGeeCD.UI;
 using OhGeeCD.Util;
 using System;
-using System.Threading;
 
 namespace OhGeeCD
 {
@@ -26,10 +25,10 @@ namespace OhGeeCD
         private readonly DalamudPluginInterface pluginInterface;
         private readonly WindowSystem windowSystem;
         private OhGeeCDConfiguration? configuration;
+        private OGCDTracker? ogcdTracker;
         private PlayerConditionManager? playerConditionManager;
         private PlayerManager? playerManager;
         private SettingsUI? settingsUI;
-        private OGCDTracker? ogcdTracker;
         private SoundManager? soundManager;
 
         public Plugin(

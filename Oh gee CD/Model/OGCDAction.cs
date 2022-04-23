@@ -55,15 +55,12 @@ namespace OhGeeCD.Model
         public short CurrentCharges { get; private set; }
 
         [JsonProperty]
-        public bool Visualize { get; set; } = false;
-
-        [JsonProperty]
         public double EarlyCallout
         {
             get => earlyCallout;
             set
             {
-                earlyCallout = value == 0.0 ? 0.1 : value;
+                earlyCallout = value <= 0.0 ? 0.1 : value;
             }
         }
 
@@ -93,6 +90,9 @@ namespace OhGeeCD.Model
 
         [JsonProperty]
         public string TextToSpeechName { get; set; }
+
+        [JsonProperty]
+        public bool Visualize { get; set; } = false;
 
         public void Debug()
         {

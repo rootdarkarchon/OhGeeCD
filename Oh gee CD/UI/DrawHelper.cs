@@ -10,23 +10,31 @@ using System.Numerics;
 
 namespace OhGeeCD.UI
 {
+    public enum DrawOGCDFlags
+    {
+        None = 0x01,
+        DrawTime = 0x02,
+        DrawCharges = 0x04,
+        DrawCircle = 0x08
+    }
+
     public class DrawHelper
     {
+        public const int ICON_DEFAULT_SIZE = 64;
         public readonly Dictionary<uint, TextureWrap> textures = new();
         private readonly DataManager dataManager;
-        public const int ICON_DEFAULT_SIZE = 64;
 
         public DrawHelper(DataManager dataManager)
         {
             this.dataManager = dataManager;
         }
 
-        public static float DegreesToRadians(double degrees) => (float)(Math.PI / 180 * degrees);
-
         public static uint Color(Vector4 color) => Color((byte)(color.X * 255), (byte)(color.Y * 255), (byte)(color.Z * 255), (byte)(color.W * 255));
 
         public static uint Color(byte r, byte g, byte b, byte a)
         { uint ret = a; ret <<= 8; ret += b; ret <<= 8; ret += g; ret <<= 8; ret += r; return ret; }
+
+        public static float DegreesToRadians(double degrees) => (float)(Math.PI / 180 * degrees);
 
         public static void DrawHelpText(string helpText)
         {
@@ -84,13 +92,6 @@ namespace OhGeeCD.UI
             {
                 ImGui.SameLine();
             }
-        }
-
-        private TextureWrap? GetImGuiTextureHqIcon(uint iconId)
-        {
-            var filePath = string.Format("ui/icon/{0:D3}000/{1:D6}_hr1.tex", iconId / 1000, iconId);
-            var file = dataManager.GetFile<TexFile>(filePath);
-            return dataManager.GetImGuiTexture(file);
         }
 
         public void DrawIconClipRect(ImDrawListPtr ptr, uint icon, Vector2 p1, Vector2 p2)
@@ -187,13 +188,12 @@ namespace OhGeeCD.UI
 
             drawList.PopClipRect();
         }
-    }
 
-    public enum DrawOGCDFlags
-    {
-        None = 0x01,
-        DrawTime = 0x02,
-        DrawCharges = 0x04,
-        DrawCircle = 0x08
+        private TextureWrap? GetImGuiTextureHqIcon(uint iconId)
+        {
+            var filePath = string.Format("ui/icon/{0:D3}000/{1:D6}_hr1.tex", iconId / 1000, iconId);
+            var file = dataManager.GetFile<TexFile>(filePath);
+            return dataManager.GetImGuiTexture(file);
+        }
     }
 }

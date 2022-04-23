@@ -558,7 +558,7 @@ namespace OhGeeCD.UI
             if (ImGui.Checkbox("Edit Position of OGCD Bar", ref editPosition))
             {
                 bar.InEditMode = editPosition;
-                foreach(var otherBar in manager.OGCDBars.Where(b=> b!=bar))
+                foreach (var otherBar in manager.OGCDBars.Where(b => b != bar))
                 {
                     otherBar.InEditMode = false;
                 }

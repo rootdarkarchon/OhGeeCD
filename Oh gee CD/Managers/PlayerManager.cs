@@ -66,9 +66,11 @@ namespace OhGeeCD.Managers
         public bool DrawOGCDTracker { get; set; } = false;
         public List<Job> Jobs { get; set; } = new();
         public List<OGCDBar> OGCDBars { get; set; } = new();
-        public bool TrackOGCDGroupsSeparately { get; set; } = false;
+
         [JsonIgnore]
         public bool OGCDTrackerInEditMode { get; internal set; }
+
+        public bool TrackOGCDGroupsSeparately { get; set; } = false;
 
         public void AddOGCDBar(OGCDBar bar)
         {
