@@ -25,7 +25,7 @@ namespace OhGeeCD
         private readonly DalamudPluginInterface pluginInterface;
         private readonly WindowSystem windowSystem;
         private OhGeeCDConfiguration? configuration;
-        private OGCDTracker? ogcdTracker;
+        private OGCDTrackerUI? ogcdTracker;
         private PlayerConditionManager? playerConditionManager;
         private PlayerManager? playerManager;
         private SettingsUI? settingsUI;
@@ -95,7 +95,7 @@ namespace OhGeeCD
 
             playerManager = new PlayerManager(framework, new DataLoader(dataManager), clientState, soundManager, windowSystem, drawHelper, playerConditionManager);
             settingsUI = new SettingsUI(playerManager, soundManager, playerConditionManager, windowSystem, drawHelper);
-            ogcdTracker = new OGCDTracker(windowSystem, playerManager, playerConditionManager, drawHelper);
+            ogcdTracker = new OGCDTrackerUI(windowSystem, playerManager, playerConditionManager, drawHelper);
 
             playerManager.Initialize();
 

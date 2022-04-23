@@ -8,14 +8,14 @@ using System.Linq;
 
 namespace OhGeeCD.UI
 {
-    internal class OGCDTracker : Window, IDisposable
+    internal class OGCDTrackerUI : Window, IDisposable
     {
         private readonly DrawHelper drawHelper;
         private readonly PlayerConditionManager playerConditionManager;
         private readonly PlayerManager playerManager;
         private readonly WindowSystem windowSystem;
 
-        public OGCDTracker(WindowSystem windowSystem, PlayerManager playerManager, PlayerConditionManager playerConditionManager,
+        public OGCDTrackerUI(WindowSystem windowSystem, PlayerManager playerManager, PlayerConditionManager playerConditionManager,
             DrawHelper drawHelper) : base("OGCDTracker")
         {
             this.windowSystem = windowSystem;
@@ -26,8 +26,11 @@ namespace OhGeeCD.UI
             Flags |= ImGuiWindowFlags.NoMove;
             Flags |= ImGuiWindowFlags.NoBackground;
             Flags |= ImGuiWindowFlags.NoMouseInputs;
-            Flags |= ImGuiWindowFlags.NoTitleBar;
             Flags |= ImGuiWindowFlags.NoNavFocus;
+            Flags |= ImGuiWindowFlags.NoResize;
+            Flags |= ImGuiWindowFlags.NoScrollbar;
+            Flags |= ImGuiWindowFlags.NoTitleBar;
+            Flags |= ImGuiWindowFlags.NoDecoration;
 
             windowSystem.AddWindow(this);
             if (!IsOpen)
@@ -155,12 +158,14 @@ namespace OhGeeCD.UI
                 Flags &= ~ImGuiWindowFlags.NoMove;
                 Flags &= ~ImGuiWindowFlags.NoBackground;
                 Flags &= ~ImGuiWindowFlags.NoMouseInputs;
+                Flags &= ~ImGuiWindowFlags.NoResize;
             }
             else
             {
                 Flags |= ImGuiWindowFlags.NoMove;
                 Flags |= ImGuiWindowFlags.NoBackground;
                 Flags |= ImGuiWindowFlags.NoMouseInputs;
+                Flags |= ImGuiWindowFlags.NoResize;
             }
         }
 
