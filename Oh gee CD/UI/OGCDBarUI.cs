@@ -144,7 +144,7 @@ namespace OhGeeCD.UI
             drawList.PathLineTo(new Vector2(position.X + 1, position.Y + size));
             drawList.PathStroke(DrawHelper.Color(0, 0, 0, 255), ImDrawFlags.Closed, 2);
 
-            if ((int)action.CooldownTimer > 0)
+            if (action.CooldownTimer > 0)
             {
                 var res = (float)(1 - ((float)(action.CooldownTimer / action.Recast.TotalSeconds))) * 360;
 
@@ -180,7 +180,7 @@ namespace OhGeeCD.UI
                 ImGui.SetWindowFontScale(1);
             }
 
-            if ((int)action.CooldownTimer > 0)
+            if (action.CooldownTimer > 0)
             {
                 string cooldownString = action.CooldownTimer.ToString("0.0");
 

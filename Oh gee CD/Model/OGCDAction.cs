@@ -14,13 +14,10 @@ namespace OhGeeCD.Model
     [Serializable]
     public class OGCDAction : IDisposable, ISoundSource
     {
+        private Task? CountdownTask;
         private CancellationTokenSource cts;
-
         private uint currentJobLevel;
-
-        private int soundsToPlay = 1;
-
-        private bool timerRunning = false;
+        private double earlyCallout = 0.5;
 
         /// <summary>
         /// serialization constructor
@@ -60,7 +57,14 @@ namespace OhGeeCD.Model
         public bool DrawOnOGCDBar { get; set; } = false;
 
         [JsonProperty]
-        public double EarlyCallout { get; set; } = 0;
+        public double EarlyCallout
+        {
+            get => earlyCallout;
+            set
+            {
+                earlyCallout = value == 0.0 ? 0.1 : value;
+            }
+        }
 
         [JsonProperty]
         public uint IconToDraw { get; set; } = 0;
@@ -127,30 +131,23 @@ namespace OhGeeCD.Model
 
         public unsafe void StartCountdown(ActionManager* actionManager)
         {
-            if (timerRunning)
+            if (!CountdownTask?.IsCompleted ?? false)
             {
                 return;
             }
             cts = new CancellationTokenSource();
-            Task.Run(() =>
+            CountdownTask = Task.Run(() =>
             {
-                timerRunning = true;
-
                 var recastGroupDetail = actionManager->GetRecastGroupDetail(RecastGroup);
-                CurrentCharges = (short)Math.Floor(recastGroupDetail->Elapsed / Recast.TotalSeconds);
-                if (CurrentCharges == MaxCharges || recastGroupDetail->IsActive != 1) return;
+                //CurrentCharges = (short)Math.Floor(recastGroupDetail->Elapsed / Recast.TotalSeconds);
+                //if (CurrentCharges == MaxCharges || recastGroupDetail->IsActive != 1) return;
 
-                soundsToPlay = 1;
-                timerRunning = true;
-                CooldownTimer = 0;
+                int soundsToPlay = 0;
                 bool resetEarlyCallout = true;
                 PluginLog.Debug("Start:" + RecastGroup + "|" + CurrentCharges + "/" + MaxCharges);
-                bool cancelled = false;
                 do
                 {
-                    // reset early callout if the CooldownTimer is suddenly smaller than the new CooldownTimer
-                    var curTimeElapsed = recastGroupDetail->Elapsed;
-                    var newCoolDown = (Recast.TotalSeconds * MaxCharges - curTimeElapsed) % Recast.TotalSeconds;
+                    var newCoolDown = (Recast.TotalSeconds * MaxCharges - recastGroupDetail->Elapsed) % Recast.TotalSeconds;
                     resetEarlyCallout = resetEarlyCallout || CooldownTimer < newCoolDown;
                     CooldownTimer = newCoolDown;
 
@@ -160,39 +157,31 @@ namespace OhGeeCD.Model
                         soundsToPlay++;
                         PluginLog.Debug("UseCharge:" + RecastGroup + "|NewCharges:" + newCharges + "|CurrentCharges:" + CurrentCharges);
                     }
+                    CurrentCharges = newCharges;
 
-                    bool doIntermediateCallout = soundsToPlay > 1 && newCharges > CurrentCharges && EarlyCallout == 0.0;
-                    bool doEarlyCallout = CooldownTimer <= EarlyCallout && soundsToPlay >= 1 && resetEarlyCallout;
-                    if (doIntermediateCallout || doEarlyCallout)
+                    bool doEarlyCallout = CooldownTimer <= EarlyCallout && soundsToPlay > 0 && resetEarlyCallout;
+                    if (doEarlyCallout)
                     {
                         PlaySound();
-                        if (doEarlyCallout) resetEarlyCallout = false;
-                        if (soundsToPlay > 0) soundsToPlay--;
+                        resetEarlyCallout = false;
+                        soundsToPlay--;
                     }
-
-                    CurrentCharges = newCharges;
 
                     Thread.Sleep(100);
                     if (cts.IsCancellationRequested)
                     {
                         PluginLog.Debug("Cancel:" + RecastGroup);
-                        cancelled = true;
                     }
                     else
                     {
                         recastGroupDetail = actionManager->GetRecastGroupDetail(RecastGroup);
                     }
-                } while (recastGroupDetail->IsActive == 1 && !cancelled && CurrentCharges != MaxCharges);
+                } while (recastGroupDetail->IsActive == 1 && !cts.IsCancellationRequested && CurrentCharges != MaxCharges);
 
                 CurrentCharges = MaxCharges;
-                PluginLog.Debug("Ending:" + RecastGroup + "|" + "|Cancel:" + cancelled + "|Queue:" + soundsToPlay);
-                if (soundsToPlay == 1 && !cancelled)
-                {
-                    PlaySound();
-                }
-
                 CooldownTimer = 0;
-                timerRunning = false;
+
+                PluginLog.Debug("Ended:" + RecastGroup + "|" + "|Cancel:" + cts.IsCancellationRequested + "|Queue:" + soundsToPlay);
             }, cts.Token);
         }
 
