@@ -73,6 +73,9 @@ namespace OhGeeCD
             {
                 playerManager.AddOGCDBar((OGCDBar)bar.Clone());
             }
+
+            playerManager.TrackOGCDGroupsSeparately = PlayerManager.TrackOGCDGroupsSeparately;
+            playerManager.DrawOGCDTracker = PlayerManager.DrawOGCDTracker;
         }
 
         public void Save()

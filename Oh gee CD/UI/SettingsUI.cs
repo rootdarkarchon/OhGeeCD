@@ -69,7 +69,7 @@ namespace OhGeeCD.UI
                 DrawJobsSettings();
                 ImGui.EndTabItem();
             }
-            if (ImGui.BeginTabItem("OGCD Bars"))
+            if (ImGui.BeginTabItem("OGCD Groups"))
             {
                 DrawOGCDBarsSettings();
                 ImGui.EndTabItem();
@@ -136,12 +136,12 @@ namespace OhGeeCD.UI
                         ImGui.SetWindowFontScale(0.7f);
                         Vector4 ttsColor = action.TextToSpeechEnabled ? new Vector4(0, 255, 0, 255) : new Vector4(255, 0, 0, 255);
                         Vector4 sfxColor = action.SoundEffectEnabled ? new Vector4(0, 255, 0, 255) : new Vector4(255, 0, 0, 255);
-                        Vector4 ogcdColor = action.DrawOnOGCDBar ? new Vector4(0, 255, 0, 255) : new Vector4(255, 0, 0, 255);
+                        Vector4 ogcdColor = action.Visualize ? new Vector4(0, 255, 0, 255) : new Vector4(255, 0, 0, 255);
                         ImGui.TextColored(ttsColor, "TTS");
                         ImGui.SameLine();
                         ImGui.TextColored(sfxColor, "SFX");
                         ImGui.SameLine();
-                        ImGui.TextColored(ogcdColor, "OGD Bar");
+                        ImGui.TextColored(ogcdColor, "VIS");
                         ImGui.SetWindowFontScale(1.0f);
                         ImGui.EndTable();
                     }
@@ -195,27 +195,36 @@ namespace OhGeeCD.UI
 
         private void DrawGeneralSettings()
         {
+            ImGui.SetWindowFontScale(1.3f);
+            ImGui.Text("Activation");
+            ImGui.SetWindowFontScale(1.0f);
+            ImGui.Separator();
             bool showAlways = playerConditionState.EnableAlways;
             if (ImGui.Checkbox("Enable always", ref showAlways))
             {
                 playerConditionState.EnableAlways = showAlways;
             }
-            DrawHelper.DrawHelpText("Will show the OGCDBars always and always play sounds. Overrides Enable in duty and Enable in combat.");
+            DrawHelper.DrawHelpText("Will show any configured visualization always and always play sounds. Overrides Enable in duty and Enable in combat.");
 
             bool showInDuty = playerConditionState.EnableInDuty;
             if (ImGui.Checkbox("Enable in duty", ref showInDuty))
             {
                 playerConditionState.EnableInDuty = showInDuty;
             }
-            DrawHelper.DrawHelpText("Will show the OGCDBars in duty and play sounds in duty");
+            DrawHelper.DrawHelpText("Will show any configured visualization in duty and play sounds in duty");
 
             bool showInCombat = playerConditionState.EnableInCombat;
             if (ImGui.Checkbox("Enable in combat", ref showInCombat))
             {
                 playerConditionState.EnableInCombat = showInCombat;
             }
-            DrawHelper.DrawHelpText("Will show the OGCDBars in combat and play sounds in combat");
+            DrawHelper.DrawHelpText("Will show any configured visualization in combat and play sounds in combat");
 
+            ImGui.NewLine();
+            ImGui.SetWindowFontScale(1.3f);
+            ImGui.Text("Text to Speech settings");
+            ImGui.SetWindowFontScale(1.0f);
+            ImGui.Separator();
             int textToSpeechVolume = soundManager.TTSVolume;
             if (ImGui.SliderInt("TTS Volume##", ref textToSpeechVolume, 0, 100))
             {
@@ -238,6 +247,32 @@ namespace OhGeeCD.UI
                 }
                 ImGui.EndCombo();
             }
+
+            ImGui.NewLine();
+            ImGui.SetWindowFontScale(1.3f);
+            ImGui.Text("OGCD Tracker Settings");
+            ImGui.SetWindowFontScale(1.0f);
+            ImGui.Separator();
+            bool editPosition = manager.OGCDTrackerInEditMode;
+            if (ImGui.Checkbox("OGCD Tracker in Edit Mode", ref editPosition))
+            {
+                manager.OGCDTrackerInEditMode = editPosition;
+            }
+            DrawHelper.DrawHelpText("Enables you to edit the OGCD tracker size and position.");
+
+            bool drawOGCDTracker = manager.DrawOGCDTracker;
+            if (ImGui.Checkbox("Draw OGCD Tracker", ref drawOGCDTracker))
+            {
+                manager.DrawOGCDTracker = drawOGCDTracker;
+            }
+            DrawHelper.DrawHelpText("Enables OGCD Tracker. Requires OGCD abilities to be enabled to be drawn.\nNote: Does not require an ability to be on a OGCD Group to visualize that ability.");
+
+            bool drawOGCDTrackerSeparateGroups = manager.TrackOGCDGroupsSeparately;
+            if (ImGui.Checkbox("Track OGCD Groups Separately", ref drawOGCDTrackerSeparateGroups))
+            {
+                manager.TrackOGCDGroupsSeparately = drawOGCDTrackerSeparateGroups;
+            }
+            DrawHelper.DrawHelpText("Will make a separate line in the tracker for each OGCD Group.");
         }
 
         private unsafe void DrawJobsSettings()
@@ -315,20 +350,20 @@ namespace OhGeeCD.UI
         private void DrawOGCDActionOGCDBarSettings(Job job, OGCDAction action)
         {
             ImGui.SetWindowFontScale(1.3f);
-            bool onGCDBar = action.DrawOnOGCDBar;
-            if (ImGui.Checkbox("Draw on OGCD Bar##" + action.RecastGroup, ref onGCDBar))
+            bool onGCDBar = action.Visualize;
+            if (ImGui.Checkbox("Visualize##" + action.RecastGroup, ref onGCDBar))
             {
-                action.DrawOnOGCDBar = onGCDBar;
+                action.Visualize = onGCDBar;
             }
-            DrawHelper.DrawHelpText("Enables drawing on OGCD Bars.\n\nThe ability will be drawn on the OGCD Bar you select below.\n" +
-                "Keep in mind you will need to create a OGCD Bar first.");
+            DrawHelper.DrawHelpText("Enables drawing on OGCD Bars and the tracker.\n\nThe ability will be drawn on the OGCD Bar you select below.\n" +
+                "Keep in mind you will need to create a OGCD Group first.\nIf you select no group it will be only drawn on the OGCD tracker, if enabled.");
 
             ImGui.SetWindowFontScale(1);
             ImGui.Separator();
 
             ImGui.SetNextItemWidth(350);
 
-            if (ImGui.BeginCombo("OGCD Bar##" + action.RecastGroup,
+            if (ImGui.BeginCombo("OGCD Group##" + action.RecastGroup,
                 manager.OGCDBars.SingleOrDefault(a => a.JobRecastGroupIds.ContainsKey(job.Id) && a.JobRecastGroupIds[job.Id].Contains(action.RecastGroup))?.Name ?? "None"))
             {
                 var inBar = manager.OGCDBars.Any(bar => bar.JobRecastGroupIds.ContainsKey(job.Id) && bar.JobRecastGroupIds[job.Id].Contains(action.RecastGroup));
@@ -351,7 +386,7 @@ namespace OhGeeCD.UI
                     if (ImGui.Selectable(bar.Name, inBar))
                     {
                         bar.AddOGCDAction(job, action);
-                        foreach(var otherbar in manager.OGCDBars.Where(b=>b.Id != bar.Id))
+                        foreach (var otherbar in manager.OGCDBars.Where(b => b.Id != bar.Id))
                         {
                             otherbar.RemoveOGCDAction(job, action);
                         }
@@ -511,11 +546,31 @@ namespace OhGeeCD.UI
 
         private void DrawOGCDBar(OGCDBar bar)
         {
+            var drawOGCDBar = bar.DrawOGCDBar;
+            if (ImGui.Checkbox("Draw OGCD Bar", ref drawOGCDBar))
+            {
+                bar.DrawOGCDBar = drawOGCDBar;
+            }
+            DrawHelper.DrawHelpText("Will draw icons of the OGCD group on the screen.");
+
+            ImGui.Indent();
             var editPosition = bar.InEditMode;
-            if (ImGui.Checkbox("Edit Position", ref editPosition))
+            if (ImGui.Checkbox("Edit Position of OGCD Bar", ref editPosition))
             {
                 bar.InEditMode = editPosition;
+                foreach(var otherBar in manager.OGCDBars.Where(b=> b!=bar))
+                {
+                    otherBar.InEditMode = false;
+                }
             }
+            ImGui.Unindent();
+
+            var drawOnTracker = bar.DrawOnTracker;
+            if (ImGui.Checkbox("Draw on Tracker", ref drawOnTracker))
+            {
+                bar.DrawOnTracker = drawOnTracker;
+            }
+            DrawHelper.DrawHelpText("Will draw the OGCD group on the OGCD tracker.");
 
             string name = bar.Name;
             if (ImGui.InputText("Name", ref name, 100))
@@ -587,12 +642,12 @@ namespace OhGeeCD.UI
                 ImGui.EndCombo();
             }
 
-            ImGui.Text("Items currently in bar:");
+            ImGui.Text("Items currently in group:");
 
             foreach (var job in manager.Jobs)
             {
                 var items = (bar.JobRecastGroupIds.ContainsKey(job.Id) ? bar.JobRecastGroupIds[job.Id] : null)
-                    ?.Where(i => job.Actions.Any(a => a.RecastGroup == i && a.DrawOnOGCDBar)).ToList();
+                    ?.Where(i => job.Actions.Any(a => a.RecastGroup == i && a.Visualize)).ToList();
                 if (items == null || items?.Count == 0) continue;
 
                 if (ImGui.CollapsingHeader(job.NameOrParentName + " (" + items!.Count + " item(s))", ImGuiTreeNodeFlags.None))
@@ -650,14 +705,14 @@ namespace OhGeeCD.UI
             if (ImGui.Button("+", ImGuiHelpers.ScaledVector2(24, 24)))
             {
                 var barId = manager.OGCDBars.OrderBy(b => b.Id).LastOrDefault()?.Id + 1 ?? 1;
-                manager.AddOGCDBar(new OGCDBar(barId, "New OGCD Bar #" + barId));
+                manager.AddOGCDBar(new OGCDBar(barId, "New OGCD Group #" + barId));
             }
 
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
                 ImGui.PushTextWrapPos(ImGui.GetFontSize() * 35.0f);
-                ImGui.TextUnformatted("Add new OGCD bar");
+                ImGui.TextUnformatted("Add new OGCD Group");
                 ImGui.PopTextWrapPos();
                 ImGui.EndTooltip();
             }

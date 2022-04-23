@@ -10,6 +10,7 @@ using OhGeeCD.Managers;
 using OhGeeCD.UI;
 using OhGeeCD.Util;
 using System;
+using System.Threading;
 
 namespace OhGeeCD
 {
@@ -23,11 +24,12 @@ namespace OhGeeCD
         private readonly DrawHelper drawHelper;
         private readonly Framework framework;
         private readonly DalamudPluginInterface pluginInterface;
-        private readonly WindowSystem system;
+        private readonly WindowSystem windowSystem;
         private OhGeeCDConfiguration? configuration;
         private PlayerConditionManager? playerConditionManager;
         private PlayerManager? playerManager;
         private SettingsUI? settingsUI;
+        private OGCDTracker? ogcdTracker;
         private SoundManager? soundManager;
 
         public Plugin(
@@ -43,7 +45,7 @@ namespace OhGeeCD
             this.framework = framework;
             this.condition = condition;
             drawHelper = new DrawHelper(dataManager);
-            system = new WindowSystem("OhGeeCD");
+            windowSystem = new WindowSystem("OhGeeCD");
 
             clientState.Login += State_Login;
             clientState.Logout += State_Logout;
@@ -68,6 +70,7 @@ namespace OhGeeCD
             settingsUI?.Dispose();
             soundManager?.Dispose();
             playerConditionManager?.Dispose();
+            ogcdTracker?.Dispose();
         }
 
         private void DrawConfigUI()
@@ -77,7 +80,7 @@ namespace OhGeeCD
 
         private void DrawUI()
         {
-            system.Draw();
+            windowSystem.Draw();
         }
 
         private void OnCommand(string command, string args)
@@ -91,8 +94,9 @@ namespace OhGeeCD
             playerConditionManager = new PlayerConditionManager(condition);
             soundManager = new SoundManager(playerConditionManager);
 
-            playerManager = new PlayerManager(framework, new DataLoader(dataManager), clientState, soundManager, system, drawHelper, playerConditionManager);
-            settingsUI = new SettingsUI(playerManager, soundManager, playerConditionManager, system, drawHelper);
+            playerManager = new PlayerManager(framework, new DataLoader(dataManager), clientState, soundManager, windowSystem, drawHelper, playerConditionManager);
+            settingsUI = new SettingsUI(playerManager, soundManager, playerConditionManager, windowSystem, drawHelper);
+            ogcdTracker = new OGCDTracker(windowSystem, playerManager, playerConditionManager, drawHelper);
 
             playerManager.Initialize();
 

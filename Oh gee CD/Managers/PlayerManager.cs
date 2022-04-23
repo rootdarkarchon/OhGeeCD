@@ -3,6 +3,7 @@ using Dalamud.Game.ClientState;
 using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using Newtonsoft.Json;
 using OhGeeCD.Model;
 using OhGeeCD.UI;
 using OhGeeCD.Util;
@@ -62,8 +63,12 @@ namespace OhGeeCD.Managers
             conditionState.WipeDetected += (_, _) => UpdateJobs();
         }
 
+        public bool DrawOGCDTracker { get; set; } = false;
         public List<Job> Jobs { get; set; } = new();
         public List<OGCDBar> OGCDBars { get; set; } = new();
+        public bool TrackOGCDGroupsSeparately { get; set; } = false;
+        [JsonIgnore]
+        public bool OGCDTrackerInEditMode { get; internal set; }
 
         public void AddOGCDBar(OGCDBar bar)
         {
@@ -128,7 +133,7 @@ namespace OhGeeCD.Managers
                 {
                     var groupDetail = actionManager->GetRecastGroupDetail(action.RecastGroup);
 
-                    if ((action.DrawOnOGCDBar || action.TextToSpeechEnabled || action.SoundEffectEnabled) && groupDetail->IsActive != 0)
+                    if ((action.Visualize || action.TextToSpeechEnabled || action.SoundEffectEnabled) && groupDetail->IsActive != 0)
                     {
                         action.StartCountdown(actionManager);
                     }

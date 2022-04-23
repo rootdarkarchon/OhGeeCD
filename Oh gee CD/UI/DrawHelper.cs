@@ -2,8 +2,10 @@
 using ImGuiNET;
 using ImGuiScene;
 using Lumina.Data.Files;
+using OhGeeCD.Model;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 namespace OhGeeCD.UI
@@ -12,6 +14,7 @@ namespace OhGeeCD.UI
     {
         public readonly Dictionary<uint, TextureWrap> textures = new();
         private readonly DataManager dataManager;
+        public const int ICON_DEFAULT_SIZE = 64;
 
         public DrawHelper(DataManager dataManager)
         {
@@ -106,5 +109,91 @@ namespace OhGeeCD.UI
 
             ptr.AddImage(hqicon.ImGuiHandle, p1, p2, new Vector2(1 - 76 / 80f, 1 - 76 / 80f), new Vector2(76 / 80f, 76 / 80f));
         }
+
+        public void DrawOGCDIcon(OGCDAction action, Vector2 position, short size, DrawOGCDFlags flags = DrawOGCDFlags.DrawCharges | DrawOGCDFlags.DrawTime | DrawOGCDFlags.DrawCircle)
+        {
+            var drawList = ImGui.GetWindowDrawList();
+            position = new Vector2(ImGui.GetWindowPos().X + position.X, ImGui.GetWindowPos().Y + position.Y);
+
+            ImGui.PushClipRect(position, new Vector2(position.X + (size * 2),
+                position.Y + (size * 2)), false);
+
+            var iconToDraw = action.IconToDraw != 0
+                && action.Abilities.Single(a => a.Icon == action.IconToDraw).IsAvailable
+                    ? action.IconToDraw
+                    : action.Abilities.Where(a => a.IsAvailable).OrderByDescending(a => a.RequiredJobLevel).First().Icon;
+
+            // draw icon
+            DrawIconClipRect(drawList, iconToDraw, position, new Vector2(position.X + size, position.Y + size));
+
+            // add border
+            drawList.PathLineTo(new Vector2(position.X + 1, position.Y + 1));
+            drawList.PathLineTo(new Vector2(position.X + size, position.Y + 1));
+            drawList.PathLineTo(new Vector2(position.X + size, position.Y + size));
+            drawList.PathLineTo(new Vector2(position.X + 1, position.Y + size));
+            drawList.PathStroke(Color(0, 0, 0, 255), ImDrawFlags.Closed, 2);
+
+            if (action.CooldownTimer > 0 && (flags & DrawOGCDFlags.DrawCircle) != 0)
+            {
+                var res = (float)(1 - ((float)(action.CooldownTimer / action.Recast.TotalSeconds))) * 360;
+
+                drawList.PushClipRect(position, new Vector2(position.X + size, position.Y + size), false);
+                drawList.PathLineTo(new Vector2(position.X + (size / 2), position.Y + (size / 2)));
+                drawList.PathArcTo(new Vector2(position.X + (size / 2), position.Y + (size / 2)), size,
+                    DegreesToRadians(res - 90),
+                    DegreesToRadians(270));
+                drawList.PathLineTo(new Vector2(position.X + (size / 2), position.Y + (size / 2)));
+
+                drawList.PathFillConvex(Color(0, 0, 0, 200));
+
+                drawList.PathArcTo(new Vector2(position.X + (size / 2), position.Y + (size / 2)), (size / 2) - 2,
+                    DegreesToRadians(-90),
+                    DegreesToRadians(res - 90));
+                drawList.PathStroke(Color(255, 255, 255, 255), ImDrawFlags.None, 2);
+                drawList.PopClipRect();
+            }
+
+            if (action.MaxCharges > 1 && (flags & DrawOGCDFlags.DrawCharges) != 0)
+            {
+                string cooldownString = action.CurrentCharges.ToString("0");
+
+                ImGui.SetWindowFontScale(2.5f * (size / (float)ICON_DEFAULT_SIZE));
+
+                var textSize = ImGui.CalcTextSize(cooldownString);
+                uint fontColorText = action.CurrentCharges > 0 ? Color(255, 255, 255, 255) : Color(255, 0, 0, 255);
+                uint fontColorOutline = action.CurrentCharges > 0 ? Color(255, 0, 0, 255) : Color(0, 0, 0, 255);
+                Vector2 cornerPos = new(position.X + size - (textSize.X * 0.8f), position.Y + size - (textSize.Y * 0.7f));
+
+                DrawOutlinedFont(drawList, cooldownString, cornerPos, fontColorText, fontColorOutline, 2);
+
+                ImGui.SetWindowFontScale(1);
+            }
+
+            if (action.CooldownTimer > 0 && (flags & DrawOGCDFlags.DrawTime) != 0)
+            {
+                string cooldownString = action.CooldownTimer.ToString("0.0");
+
+                ImGui.SetWindowFontScale(2 * (size / (float)ICON_DEFAULT_SIZE));
+
+                var textSize = ImGui.CalcTextSize(cooldownString);
+                uint fontColorText = Color(255, 255, 255, 255);
+                uint fontColorOutline = Color(0, 0, 0, 255);
+                Vector2 centerPos = new(position.X + (size / 2) - (textSize.X / 2), position.Y + (size / 2) - (textSize.Y / 2));
+
+                DrawOutlinedFont(drawList, cooldownString, centerPos, fontColorText, fontColorOutline, 2);
+
+                ImGui.SetWindowFontScale(1);
+            }
+
+            drawList.PopClipRect();
+        }
+    }
+
+    public enum DrawOGCDFlags
+    {
+        None = 0x01,
+        DrawTime = 0x02,
+        DrawCharges = 0x04,
+        DrawCircle = 0x08
     }
 }

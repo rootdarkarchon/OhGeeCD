@@ -54,7 +54,8 @@ namespace OhGeeCD.Model
         [JsonIgnore]
         public short CurrentCharges { get; private set; }
 
-        public bool DrawOnOGCDBar { get; set; } = false;
+        [JsonProperty]
+        public bool Visualize { get; set; } = false;
 
         [JsonProperty]
         public double EarlyCallout
@@ -167,7 +168,7 @@ namespace OhGeeCD.Model
                         soundsToPlay--;
                     }
 
-                    Thread.Sleep(100);
+                    Thread.Sleep(10);
                     if (cts.IsCancellationRequested)
                     {
                         PluginLog.Debug("Cancel:" + RecastGroup);
@@ -187,7 +188,7 @@ namespace OhGeeCD.Model
 
         public void UpdateValuesFromOtherAction(OGCDAction fittingActionFromConfig)
         {
-            DrawOnOGCDBar = fittingActionFromConfig.DrawOnOGCDBar;
+            Visualize = fittingActionFromConfig.Visualize;
             SoundEffect = fittingActionFromConfig.SoundEffect;
             SoundEffectEnabled = fittingActionFromConfig.SoundEffectEnabled;
             TextToSpeechName = fittingActionFromConfig.TextToSpeechName;

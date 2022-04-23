@@ -31,6 +31,12 @@ namespace OhGeeCD.Model
         }
 
         [JsonProperty]
+        public bool DrawOGCDBar { get; set; } = true;
+
+        [JsonProperty]
+        public bool DrawOnTracker { get; set; } = true;
+
+        [JsonProperty]
         public OGCDBarHorizontalLayout HorizontalLayout { get; set; }
 
         [JsonProperty]
