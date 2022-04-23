@@ -1,5 +1,4 @@
 ﻿using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
 using ImGuiNET;
 using OhGeeCD.Managers;
 using OhGeeCD.Model;
@@ -17,14 +16,30 @@ namespace OhGeeCD.UI
         private readonly DrawHelper drawHelper;
         private readonly PlayerConditionManager playerConditionManager;
         private readonly PlayerManager playerManager;
+
+        private readonly Dictionary<int, int> SpreadAroundCenterPositions = new Dictionary<int, int>()
+        {
+            {0, 0}, {1, 1}, {2, -1}, {3, 2}, {4, -2}, {5, 3}, {6, -3}, {7, 4}, {8, -4}, {9, 5}
+        };
+
+        private readonly Dictionary<int, int> SpreadLeftToRightOrTopToBottomPositions = new Dictionary<int, int>()
+        {
+            {0, 0}, {1,1}, {2,2}, {3,3}, {4, 4}, {5, 5}, {6,6}, {7, 7}, {8, 8}, {9, 9}
+        };
+
+        private readonly Dictionary<int, int> SpreadRightToLeftOrBottomToTopPositions = new Dictionary<int, int>()
+        {
+            {0, 0}, {1,-1}, {2,-2}, {3,-3}, {4, -4}, {5, -5}, {6,-6}, {7, -7}, {8, -8}, {9, -9}
+        };
+
         private readonly WindowSystem system;
 
-        public OGCDBarUI(OGCDBar bar, WindowSystem system, PlayerManager playerManager, PlayerConditionManager playerConditionState, DrawHelper drawHelper) : base("OGCDBarUI" + bar.Id)
+        public OGCDBarUI(OGCDBar bar, WindowSystem system, PlayerManager playerManager, PlayerConditionManager playerConditionManager, DrawHelper drawHelper) : base("OGCDBarUI" + bar.Id)
         {
             this.bar = bar;
             this.system = system;
             this.playerManager = playerManager;
-            this.playerConditionManager = playerConditionState;
+            this.playerConditionManager = playerConditionManager;
             this.drawHelper = drawHelper;
             system.AddWindow(this);
             if (!IsOpen)
@@ -51,53 +66,55 @@ namespace OhGeeCD.UI
         {
             bool show = playerConditionManager.ProcessingActive();
             show |= bar.InEditMode;
-            if (show == false) return;
+            if (!show) return;
 
             var job = playerManager.Jobs.SingleOrDefault(j => j.IsActive);
             if (job == null) return;
 
-            if (bar.InEditMode)
-            {
-                Flags &= ~ImGuiWindowFlags.NoMove;
-                Flags &= ~ImGuiWindowFlags.NoBackground;
-                Flags &= ~ImGuiWindowFlags.NoMouseInputs;
-            }
-            else
-            {
-                Flags |= ImGuiWindowFlags.NoMove;
-                Flags |= ImGuiWindowFlags.NoBackground;
-                Flags |= ImGuiWindowFlags.NoMouseInputs;
-            }
+            CheckEditMode();
 
             var jobActions = job.Actions.Where(j => j.DrawOnOGCDBar && j.Abilities.Any(a => a.IsAvailable)).ToArray();
-            var barPositions = bar.JobRecastGroupIds.ContainsKey(job.Id) ? bar.JobRecastGroupIds[job.Id] : new List<byte>();
+            var barPositions = bar.JobRecastGroupIds.ContainsKey(job.Id)
+                ? bar.JobRecastGroupIds[job.Id].Where(b => jobActions.Select(a => a.RecastGroup).Contains(b)).ToList()
+                : new List<byte>();
 
             int x = 0;
             int y = 0;
 
             short iconSize = (short)(DEFAULT_SIZE * bar.Scale);
 
-            foreach (var actionId in barPositions)
+            var spreadPositionsHorizontal = (bar.HorizontalLayout switch
             {
-                var action = jobActions.SingleOrDefault(j => j.RecastGroup == actionId);
-                if (action == null) continue;
+                OGCDBarHorizontalLayout.SpreadAroundCenter => SpreadAroundCenterPositions,
+                OGCDBarHorizontalLayout.LeftToRight => SpreadLeftToRightOrTopToBottomPositions,
+                OGCDBarHorizontalLayout.RightToLeft => SpreadRightToLeftOrBottomToTopPositions,
+                _ => SpreadRightToLeftOrBottomToTopPositions,
+            }).ToList();
 
+            var spreadPositionsVertical = (bar.VerticalLayout switch
+            {
+                OGCDBarVerticalLayout.SpreadAroundCenter => SpreadAroundCenterPositions,
+                OGCDBarVerticalLayout.TopToBottom => SpreadLeftToRightOrTopToBottomPositions,
+                OGCDBarVerticalLayout.BottomToTop => SpreadRightToLeftOrBottomToTopPositions,
+                _ => SpreadRightToLeftOrBottomToTopPositions,
+            }).ToList();
+
+            foreach (var actionID in barPositions)
+            {
+                int xToMove = spreadPositionsHorizontal.Single(p => p.Key == x).Value;
+                int yToMove = spreadPositionsVertical.Single(p => p.Key == y).Value;
+
+                var action = jobActions.Single(j => j.RecastGroup == actionID);
                 DrawOGCD(action, new Vector2(
-                    ImGui.GetWindowContentRegionMin().X + (iconSize * x) + (bar.HorizontalPadding * x),
-                    ImGui.GetWindowContentRegionMin().Y + (iconSize * y) + (bar.VerticalPadding * y)),
+                    ImGui.GetWindowContentRegionMin().X + (iconSize * xToMove) + (bar.HorizontalPadding * xToMove),
+                    ImGui.GetWindowContentRegionMin().Y + (iconSize * yToMove) + (bar.VerticalPadding * yToMove)),
                     iconSize);
-                if (bar.HorizontalLayout == OGCDBarHorizontalLayout.LeftToRight)
-                    x++;
-                else
-                    x--;
 
-                if (Math.Abs(x) == bar.MaxItemsHorizontal)
+                x++;
+                if (x == bar.MaxItemsHorizontal)
                 {
                     x = 0;
-                    if (bar.VerticalLayout == OGCDBarVerticalLayout.TopToBottom)
-                        y++;
-                    else
-                        y--;
+                    y++;
                 }
             }
 
@@ -200,6 +217,22 @@ namespace OhGeeCD.UI
                 Flags &= ~ImGuiWindowFlags.NoBackground;
                 Flags &= ~ImGuiWindowFlags.NoMouseInputs;
                 ImGui.PushStyleColor(ImGuiCol.WindowBg, DrawHelper.Color(255, 0, 0, 255));
+            }
+            else
+            {
+                Flags |= ImGuiWindowFlags.NoMove;
+                Flags |= ImGuiWindowFlags.NoBackground;
+                Flags |= ImGuiWindowFlags.NoMouseInputs;
+            }
+        }
+
+        private void CheckEditMode()
+        {
+            if (bar.InEditMode)
+            {
+                Flags &= ~ImGuiWindowFlags.NoMove;
+                Flags &= ~ImGuiWindowFlags.NoBackground;
+                Flags &= ~ImGuiWindowFlags.NoMouseInputs;
             }
             else
             {

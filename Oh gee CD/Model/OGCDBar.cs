@@ -7,12 +7,12 @@ namespace OhGeeCD.Model
 {
     public enum OGCDBarHorizontalLayout
     {
-        LeftToRight, RightToLeft
+        LeftToRight, RightToLeft, SpreadAroundCenter
     }
 
     public enum OGCDBarVerticalLayout
     {
-        TopToBottom, BottomToTop
+        TopToBottom, BottomToTop, SpreadAroundCenter
     }
 
     [Serializable]
