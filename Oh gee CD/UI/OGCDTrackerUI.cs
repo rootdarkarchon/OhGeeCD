@@ -25,18 +25,16 @@ namespace OhGeeCD.UI
 
             Flags |= ImGuiWindowFlags.NoMove;
             Flags |= ImGuiWindowFlags.NoBackground;
-            Flags |= ImGuiWindowFlags.NoMouseInputs;
+            Flags |= ImGuiWindowFlags.NoInputs;
             Flags |= ImGuiWindowFlags.NoNavFocus;
             Flags |= ImGuiWindowFlags.NoResize;
             Flags |= ImGuiWindowFlags.NoScrollbar;
             Flags |= ImGuiWindowFlags.NoTitleBar;
             Flags |= ImGuiWindowFlags.NoDecoration;
+            RespectCloseHotkey = false;
 
             windowSystem.AddWindow(this);
-            if (!IsOpen)
-            {
-                Toggle();
-            }
+            IsOpen = true;
         }
 
         private Job? activeJob => playerManager.Jobs.SingleOrDefault(j => j.IsActive);
@@ -157,14 +155,14 @@ namespace OhGeeCD.UI
             {
                 Flags &= ~ImGuiWindowFlags.NoMove;
                 Flags &= ~ImGuiWindowFlags.NoBackground;
-                Flags &= ~ImGuiWindowFlags.NoMouseInputs;
+                Flags &= ~ImGuiWindowFlags.NoInputs;
                 Flags &= ~ImGuiWindowFlags.NoResize;
             }
             else
             {
                 Flags |= ImGuiWindowFlags.NoMove;
                 Flags |= ImGuiWindowFlags.NoBackground;
-                Flags |= ImGuiWindowFlags.NoMouseInputs;
+                Flags |= ImGuiWindowFlags.NoInputs;
                 Flags |= ImGuiWindowFlags.NoResize;
             }
         }

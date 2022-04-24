@@ -68,17 +68,14 @@ namespace OhGeeCD.UI
             this.playerManager = playerManager;
             this.playerConditionManager = playerConditionManager;
             this.drawHelper = drawHelper;
-            system.AddWindow(this);
-            if (!IsOpen)
-            {
-                Toggle();
-            }
-            Flags |= ImGuiWindowFlags.NoScrollbar;
-            Flags |= ImGuiWindowFlags.NoTitleBar;
+
             Flags |= ImGuiWindowFlags.NoBackground;
             Flags |= ImGuiWindowFlags.NoDecoration;
-            Flags |= ImGuiWindowFlags.NoMouseInputs;
-            Flags |= ImGuiWindowFlags.NoNavFocus;
+            Flags |= ImGuiWindowFlags.NoInputs;
+            RespectCloseHotkey = false;
+
+            system.AddWindow(this);
+            IsOpen = true;
         }
 
         public void Dispose()
@@ -166,30 +163,14 @@ namespace OhGeeCD.UI
             {
                 Flags &= ~ImGuiWindowFlags.NoMove;
                 Flags &= ~ImGuiWindowFlags.NoBackground;
-                Flags &= ~ImGuiWindowFlags.NoMouseInputs;
+                Flags &= ~ImGuiWindowFlags.NoInputs;
                 ImGui.PushStyleColor(ImGuiCol.WindowBg, DrawHelper.Color(255, 0, 0, 255));
             }
             else
             {
                 Flags |= ImGuiWindowFlags.NoMove;
                 Flags |= ImGuiWindowFlags.NoBackground;
-                Flags |= ImGuiWindowFlags.NoMouseInputs;
-            }
-        }
-
-        private void CheckEditMode()
-        {
-            if (bar.InEditMode)
-            {
-                Flags &= ~ImGuiWindowFlags.NoMove;
-                Flags &= ~ImGuiWindowFlags.NoBackground;
-                Flags &= ~ImGuiWindowFlags.NoMouseInputs;
-            }
-            else
-            {
-                Flags |= ImGuiWindowFlags.NoMove;
-                Flags |= ImGuiWindowFlags.NoBackground;
-                Flags |= ImGuiWindowFlags.NoMouseInputs;
+                Flags |= ImGuiWindowFlags.NoInputs;
             }
         }
     }

@@ -1,4 +1,5 @@
-﻿using Dalamud.Game.ClientState.Conditions;
+﻿using Dalamud.Game.ClientState;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Hooking;
 using Dalamud.Utility.Signatures;
 using Newtonsoft.Json;
@@ -12,10 +13,12 @@ namespace OhGeeCD.Managers
         private readonly Hook<ActorControlSelf>? actorControlSelfHook = null;
 
         private readonly Condition condition;
+        private readonly ClientState clientState;
 
-        public PlayerConditionManager(Condition condition)
+        public PlayerConditionManager(Condition condition, ClientState clientState)
         {
             this.condition = condition;
+            this.clientState = clientState;
             SignatureHelper.Initialise(this);
 
             actorControlSelfHook?.Enable();
@@ -44,7 +47,7 @@ namespace OhGeeCD.Managers
         public bool InDuty => condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56] || condition[ConditionFlag.BoundByDuty95] || condition[ConditionFlag.BoundToDuty97];
 
         [JsonIgnore]
-        public bool InPvP => condition[ConditionFlag.PvPDisplayActive];
+        public bool InPvP => clientState.IsPvP || condition[ConditionFlag.PvPDisplayActive];
 
         public void Dispose()
         {
@@ -53,13 +56,13 @@ namespace OhGeeCD.Managers
 
         public bool ProcessingActive()
         {
-            bool show = false;
-            show |= EnableAlways;
-            show |= EnableInCombat && InCombat;
-            show |= EnableInDuty && InDuty;
-            show &= !CutsceneActive;
-            show &= !InPvP;
-            return show;
+            bool active = false;
+            active |= EnableAlways;
+            active |= EnableInCombat && InCombat;
+            active |= EnableInDuty && InDuty;
+            active &= !CutsceneActive;
+            active &= !InPvP;
+            return active;
         }
 
         private void ActorControlSelf_Detour(uint entityId, uint id, uint arg0, uint arg1, uint arg2, uint arg3, uint arg4, uint arg5, ulong targetId, byte a10)

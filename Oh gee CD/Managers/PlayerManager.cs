@@ -34,7 +34,7 @@ namespace OhGeeCD.Managers
 
         private uint lastLevel = 0;
 
-        private SoundManager soundManager;
+        private readonly SoundManager soundManager;
 
         /// <summary>
         /// Serialization constructor

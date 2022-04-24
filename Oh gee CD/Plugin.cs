@@ -51,7 +51,7 @@ namespace OhGeeCD
 
             if (clientState.IsLoggedIn)
             {
-                State_Login(null, EventArgs.Empty);
+                InitializePlugin();
             }
         }
 
@@ -89,8 +89,13 @@ namespace OhGeeCD
 
         private void State_Login(object? sender, EventArgs e)
         {
+            InitializePlugin();
+        }
+
+        private void InitializePlugin()
+        {
             commandManager.AddHandler(commandName, new CommandInfo(OnCommand) { HelpMessage = "Opens Oh gee, CD configuration" });
-            playerConditionManager = new PlayerConditionManager(condition);
+            playerConditionManager = new PlayerConditionManager(condition, clientState);
             soundManager = new SoundManager(playerConditionManager);
 
             playerManager = new PlayerManager(framework, new DataLoader(dataManager), clientState, soundManager, windowSystem, drawHelper, playerConditionManager);
