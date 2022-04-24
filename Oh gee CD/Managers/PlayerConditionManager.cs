@@ -15,6 +15,14 @@ namespace OhGeeCD.Managers
         private readonly Condition condition;
         private readonly ClientState clientState;
 
+
+        // serialization constructor
+        public PlayerConditionManager()
+        {
+            condition = null!;
+            clientState = null!;
+        }
+
         public PlayerConditionManager(Condition condition, ClientState clientState)
         {
             this.condition = condition;
@@ -47,7 +55,7 @@ namespace OhGeeCD.Managers
         public bool InDuty => condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56] || condition[ConditionFlag.BoundByDuty95] || condition[ConditionFlag.BoundToDuty97];
 
         [JsonIgnore]
-        public bool InPvP => clientState.IsPvP || condition[ConditionFlag.PvPDisplayActive];
+        public bool InPvP => clientState.IsPvP || condition[ConditionFlag.PvPDisplayActive] || condition[ConditionFlag.InDuelingArea];
 
         public void Dispose()
         {

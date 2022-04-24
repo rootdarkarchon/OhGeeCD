@@ -1,4 +1,5 @@
 ﻿using Dalamud.Data;
+using Dalamud.Logging;
 using FFXIVClientStructs;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
@@ -7,6 +8,7 @@ using OhGeeCD.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace OhGeeCD.Util
 {
@@ -22,30 +24,33 @@ namespace OhGeeCD.Util
         public unsafe List<Job> LoadDataFromLumina()
         {
             Resolver.Initialize();
-            var levels = UIState.Instance()->PlayerState.ClassJobLevelArray;
-
-            var jobs = new List<Job>();
-
-            var classJobs = dataManager.Excel.GetSheet<ClassJob>();
-            for (uint i = 0; i < classJobs.RowCount; i++)
+            bool initialized = false;
+            List<Job> jobs = new List<Job>();
+            // this sometimes crashes for no reason so we just keep repeating on endless loop
+            while (!initialized)
             {
-                var job = classJobs.GetRow(i);
-                if (job.IsLimitedJob || job.DohDolJobIndex >= 0 || job.ExpArrayIndex <= 0) continue;
-                var jobinList = jobs.FirstOrDefault(j => j.Abbreviation == job.ClassJobParent?.Value?.Abbreviation.RawString);
-                if (jobinList == null)
+                try
                 {
-                    var newJob = new Job(i, job.Abbreviation.RawString, job.ClassJobParent?.Value?.Abbreviation.RawString, job.Name.RawString, job.ClassJobParent?.Value?.Name.RawString);
-                    newJob.SetLevel((uint)levels[job.ExpArrayIndex]);
-                    jobs.Add(newJob);
+                    jobs = LoadJobs();
+
+                    LoadAbilities(jobs);
+
+                    AssignOtherAbilitiesToAbilities(jobs);
+
+                    initialized = true;
                 }
-                else
+                catch (Exception ex)
                 {
-                    jobinList.SetAbbreviation(job.Abbreviation.RawString, job.Name.RawString);
+                    PluginLog.Debug("Issue during loading lumina data, retrying: " + ex.Message);
+                    Thread.Sleep(1000);
                 }
             }
 
-            jobs = jobs.OrderBy(j => j.Abbreviation).ToList();
+            return jobs;
+        }
 
+        private unsafe void LoadAbilities(List<Job> jobs)
+        {
             var actions = dataManager.Excel.GetSheet<Lumina.Excel.GeneratedSheets.Action>();
 
             for (uint i = 0; i < actions.RowCount; i++)
@@ -78,7 +83,10 @@ namespace OhGeeCD.Util
                     }
                 }
             }
+        }
 
+        private static unsafe void AssignOtherAbilitiesToAbilities(List<Job> jobs)
+        {
             var managerInstance = ActionManager.Instance();
             foreach (var job in jobs)
             {
@@ -103,7 +111,32 @@ namespace OhGeeCD.Util
                     }
                 }
             }
+        }
 
+        private unsafe List<Job> LoadJobs()
+        {
+            var levels = UIState.Instance()->PlayerState.ClassJobLevelArray;
+
+            List<Job> jobs = new List<Job>();
+            var classJobs = dataManager.Excel.GetSheet<ClassJob>();
+            for (uint i = 0; i < classJobs.RowCount; i++)
+            {
+                var job = classJobs.GetRow(i);
+                if (job.IsLimitedJob || job.DohDolJobIndex >= 0 || job.ExpArrayIndex <= 0) continue;
+                var jobinList = jobs.FirstOrDefault(j => j.Abbreviation == job.ClassJobParent?.Value?.Abbreviation.RawString);
+                if (jobinList == null)
+                {
+                    var newJob = new Job(i, job.Abbreviation.RawString, job.ClassJobParent?.Value?.Abbreviation.RawString, job.Name.RawString, job.ClassJobParent?.Value?.Name.RawString);
+                    newJob.SetLevel((uint)levels[job.ExpArrayIndex]);
+                    jobs.Add(newJob);
+                }
+                else
+                {
+                    jobinList.SetAbbreviation(job.Abbreviation.RawString, job.Name.RawString);
+                }
+            }
+
+            jobs = jobs.OrderBy(j => j.Abbreviation).ToList();
             return jobs;
         }
     }
