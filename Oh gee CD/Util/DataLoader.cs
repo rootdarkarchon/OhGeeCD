@@ -27,7 +27,8 @@ namespace OhGeeCD.Util
             bool initialized = false;
             List<Job> jobs = new List<Job>();
             // this sometimes crashes for no reason so we just keep repeating on endless loop
-            while (!initialized)
+            int attempts = 0;
+            while (!initialized && attempts < 10)
             {
                 try
                 {
@@ -41,9 +42,15 @@ namespace OhGeeCD.Util
                 }
                 catch (Exception ex)
                 {
-                    PluginLog.Debug("Issue during loading lumina data, retrying: " + ex.Message);
+                    PluginLog.LogError(ex, "Issue during loading lumina data, retrying");
                     Thread.Sleep(1000);
+                    attempts++;
                 }
+            }
+
+            if(attempts == 10)
+            {
+                throw new Exception("Could not load data from lumina successfully. Try reloading the plugin.")
             }
 
             return jobs;

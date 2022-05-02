@@ -60,13 +60,13 @@ namespace OhGeeCD.UI
                 outlineColor, text);
             drawList.AddText(new Vector2(textPos.X + thickness, textPos.Y),
                 outlineColor, text);
-            drawList.AddText(new Vector2(textPos.X, textPos.Y - thickness),
+            drawList.AddText(new Vector2(textPos.X - thickness, textPos.Y - thickness),
                 outlineColor, text);
-            drawList.AddText(new Vector2(textPos.X - thickness, textPos.Y),
+            drawList.AddText(new Vector2(textPos.X + thickness, textPos.Y + thickness),
                 outlineColor, text);
-            drawList.AddText(new Vector2(textPos.X, textPos.Y + thickness),
+            drawList.AddText(new Vector2(textPos.X - thickness, textPos.Y + thickness),
                 outlineColor, text);
-            drawList.AddText(new Vector2(textPos.X + thickness, textPos.Y),
+            drawList.AddText(new Vector2(textPos.X + thickness, textPos.Y - thickness),
                 outlineColor, text);
 
             drawList.AddText(textPos, fontColor, text);
@@ -94,7 +94,7 @@ namespace OhGeeCD.UI
             }
         }
 
-        public void DrawIconClipRect(ImDrawListPtr ptr, uint icon, Vector2 p1, Vector2 p2)
+        public void DrawIconClipRect(ImDrawListPtr ptr, uint icon, Vector2 p1, Vector2 p2, byte alpha)
         {
             TextureWrap? hqicon;
             if (textures.ContainsKey(icon))
@@ -108,13 +108,14 @@ namespace OhGeeCD.UI
                 textures.Add(icon, hqicon);
             }
 
-            ptr.AddImage(hqicon.ImGuiHandle, p1, p2, new Vector2(1 - 76 / 80f, 1 - 76 / 80f), new Vector2(76 / 80f, 76 / 80f));
+            ptr.AddImage(hqicon.ImGuiHandle, p1, p2, new Vector2(1 - 76 / 80f, 1 - 76 / 80f), new Vector2(76 / 80f, 76 / 80f), Color(255, 255, 255, alpha));
         }
 
-        public void DrawOGCDIcon(OGCDAction action, Vector2 position, short size, DrawOGCDFlags flags = DrawOGCDFlags.DrawCharges | DrawOGCDFlags.DrawTime | DrawOGCDFlags.DrawCircle)
+        public void DrawOGCDIcon(OGCDAction action, Vector2 position, short size, float transparency, DrawOGCDFlags flags = DrawOGCDFlags.DrawCharges | DrawOGCDFlags.DrawTime | DrawOGCDFlags.DrawCircle)
         {
             var drawList = ImGui.GetWindowDrawList();
             position = new Vector2(ImGui.GetWindowPos().X + position.X, ImGui.GetWindowPos().Y + position.Y);
+            byte alpha = (byte)(transparency * 255);
 
             ImGui.PushClipRect(position, new Vector2(position.X + (size * 2),
                 position.Y + (size * 2)), false);
@@ -125,14 +126,14 @@ namespace OhGeeCD.UI
                     : action.Abilities.Where(a => a.IsAvailable).OrderByDescending(a => a.RequiredJobLevel).First().Icon;
 
             // draw icon
-            DrawIconClipRect(drawList, iconToDraw, position, new Vector2(position.X + size, position.Y + size));
+            DrawIconClipRect(drawList, iconToDraw, position, new Vector2(position.X + size, position.Y + size), alpha);
 
             // add border
             drawList.PathLineTo(new Vector2(position.X + 1, position.Y + 1));
             drawList.PathLineTo(new Vector2(position.X + size, position.Y + 1));
             drawList.PathLineTo(new Vector2(position.X + size, position.Y + size));
             drawList.PathLineTo(new Vector2(position.X + 1, position.Y + size));
-            drawList.PathStroke(Color(0, 0, 0, 255), ImDrawFlags.Closed, 2);
+            drawList.PathStroke(Color(0, 0, 0, alpha), ImDrawFlags.Closed, 2);
 
             if (action.CooldownTimer > 0 && (flags & DrawOGCDFlags.DrawCircle) != 0)
             {
@@ -145,12 +146,12 @@ namespace OhGeeCD.UI
                     DegreesToRadians(270));
                 drawList.PathLineTo(new Vector2(position.X + (size / 2), position.Y + (size / 2)));
 
-                drawList.PathFillConvex(Color(0, 0, 0, 200));
+                drawList.PathFillConvex(Color(0, 0, 0, (byte)(200 * (255 / (float)alpha))));
 
                 drawList.PathArcTo(new Vector2(position.X + (size / 2), position.Y + (size / 2)), (size / 2) - 2,
                     DegreesToRadians(-90),
                     DegreesToRadians(res - 90));
-                drawList.PathStroke(Color(255, 255, 255, 255), ImDrawFlags.None, 2);
+                drawList.PathStroke(Color(255, 255, 255, alpha), ImDrawFlags.None, 2);
                 drawList.PopClipRect();
             }
 
@@ -161,8 +162,8 @@ namespace OhGeeCD.UI
                 ImGui.SetWindowFontScale(2.5f * (size / (float)ICON_DEFAULT_SIZE));
 
                 var textSize = ImGui.CalcTextSize(cooldownString);
-                uint fontColorText = action.CurrentCharges > 0 ? Color(255, 255, 255, 255) : Color(255, 0, 0, 255);
-                uint fontColorOutline = action.CurrentCharges > 0 ? Color(255, 0, 0, 255) : Color(0, 0, 0, 255);
+                uint fontColorText = action.CurrentCharges > 0 ? Color(alpha, 255, 255, alpha) : Color(255, 0, 0, 255);
+                uint fontColorOutline = action.CurrentCharges > 0 ? Color(255, 0, 0, alpha) : Color(0, 0, 0, alpha);
                 Vector2 cornerPos = new(position.X + size - (textSize.X * 0.8f), position.Y + size - (textSize.Y * 0.7f));
 
                 DrawOutlinedFont(drawList, cooldownString, cornerPos, fontColorText, fontColorOutline, 2);
@@ -177,8 +178,8 @@ namespace OhGeeCD.UI
                 ImGui.SetWindowFontScale(2 * (size / (float)ICON_DEFAULT_SIZE));
 
                 var textSize = ImGui.CalcTextSize(cooldownString);
-                uint fontColorText = Color(255, 255, 255, 255);
-                uint fontColorOutline = Color(0, 0, 0, 255);
+                uint fontColorText = Color(255, 255, 255, alpha);
+                uint fontColorOutline = Color(0, 0, 0, alpha);
                 Vector2 centerPos = new(position.X + (size / 2) - (textSize.X / 2), position.Y + (size / 2) - (textSize.Y / 2));
 
                 DrawOutlinedFont(drawList, cooldownString, centerPos, fontColorText, fontColorOutline, 2);

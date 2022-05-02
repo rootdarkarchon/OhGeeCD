@@ -132,7 +132,8 @@ namespace OhGeeCD.UI
                 drawHelper.DrawOGCDIcon(action, new Vector2(
                     ImGui.GetWindowContentRegionMin().X + (iconSize * xToMove) + (bar.HorizontalPadding * xToMove),
                     ImGui.GetWindowContentRegionMin().Y + (iconSize * yToMove) + (bar.VerticalPadding * yToMove)),
-                    iconSize);
+                    iconSize,
+                    bar.Transparency);
 
                 x++;
                 if (x == bar.MaxItemsHorizontal)

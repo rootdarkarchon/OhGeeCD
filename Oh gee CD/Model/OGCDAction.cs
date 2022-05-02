@@ -168,7 +168,7 @@ namespace OhGeeCD.Model
                         soundsToPlay--;
                     }
 
-                    Thread.Sleep(10);
+                    Thread.Sleep(100);
                     if (cts.IsCancellationRequested)
                     {
                         PluginLog.Debug("Cancel:" + RecastGroup);

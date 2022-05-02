@@ -111,7 +111,7 @@ namespace OhGeeCD.UI
                         drawHelper.DrawOGCDIcon(kvp.Key,
                             new System.Numerics.Vector2(ImGui.GetWindowContentRegionMin().X + maxTextSize.X + 5 + (float)kvp.Value,
                                 ImGui.GetWindowContentRegionMin().Y + (float)(size * barId)),
-                            (short)size, DrawOGCDFlags.DrawTime);
+                            (short)size, 1.0f, DrawOGCDFlags.DrawTime);
                     }
                     barId++;
                 }
@@ -143,7 +143,7 @@ namespace OhGeeCD.UI
                     drawHelper.DrawOGCDIcon(ogcdaction,
                         new System.Numerics.Vector2(ImGui.GetWindowContentRegionMin().X + (float)position,
                             (ImGui.GetWindowContentRegionMax().Y - ImGui.GetWindowContentRegionMin().Y) / 2.0f - size / 2),
-                        (short)size, DrawOGCDFlags.DrawTime);
+                        (short)size, 1.0f, DrawOGCDFlags.DrawTime);
                 }
             }
         }

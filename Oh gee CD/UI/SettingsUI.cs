@@ -608,6 +608,14 @@ namespace OhGeeCD.UI
                 bar.Scale = scale;
             }
 
+            double transparency = bar.Transparency;
+            if (ImGui.InputDouble("Transparency", ref transparency, 0.1, 1.0, "%.2f"))
+            {
+                if (transparency > 1) transparency = 1;
+                if (transparency < 0.1) transparency = 0.1f;
+                bar.Transparency = (float)transparency;
+            }
+
             if (ImGui.BeginCombo("Horizontal Layout", bar.HorizontalLayout.ToString()))
             {
                 foreach (var value in Enum.GetValues<OGCDBarHorizontalLayout>())

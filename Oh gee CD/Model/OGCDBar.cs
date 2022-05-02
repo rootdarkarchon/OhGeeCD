@@ -69,6 +69,9 @@ namespace OhGeeCD.Model
         [JsonProperty]
         public int VerticalPadding { get; set; }
 
+        [JsonProperty]
+        public float Transparency { get; set; } = 1.0f;
+
         public void AddOGCDAction(Job job, OGCDAction action)
         {
             if (!JobRecastGroupIds.ContainsKey(job.Id))
