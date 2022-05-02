@@ -50,7 +50,7 @@ namespace OhGeeCD.Util
 
             if(attempts == 10)
             {
-                throw new Exception("Could not load data from lumina successfully. Try reloading the plugin.")
+                throw new Exception("Could not load data from lumina successfully. Try reloading the plugin.");
             }
 
             return jobs;
