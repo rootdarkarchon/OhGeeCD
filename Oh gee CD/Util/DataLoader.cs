@@ -25,7 +25,7 @@ namespace OhGeeCD.Util
         {
             Resolver.Initialize();
             bool initialized = false;
-            List<Job> jobs = new List<Job>();
+            List<Job> jobs = new();
             // this sometimes crashes for no reason so we just keep repeating on endless loop
             int attempts = 0;
             while (!initialized && attempts < 10)
@@ -83,7 +83,7 @@ namespace OhGeeCD.Util
                             else
                             {
                                 OGCDAction ogcdaction = new(new OGCDAbility(i, action.Icon, action.Name.RawString, action.ClassJobLevel, job.Level, action.IsRoleAction),
-                                    TimeSpan.FromSeconds(action.Recast100ms / 10), (byte)(action.CooldownGroup - 1), job.Level);
+                                    (byte)(action.CooldownGroup - 1), job.Level);
                                 job.Actions.Add(ogcdaction);
                             }
                         }
@@ -124,7 +124,7 @@ namespace OhGeeCD.Util
         {
             var levels = UIState.Instance()->PlayerState.ClassJobLevelArray;
 
-            List<Job> jobs = new List<Job>();
+            List<Job> jobs = new();
             var classJobs = dataManager.Excel.GetSheet<ClassJob>();
             for (uint i = 0; i < classJobs.RowCount; i++)
             {

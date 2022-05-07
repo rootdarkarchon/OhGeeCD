@@ -30,7 +30,7 @@ namespace OhGeeCD.UI
         {
             SizeConstraints = new WindowSizeConstraints()
             {
-                MinimumSize = new(700, 300),
+                MinimumSize = new(700, 400),
                 MaximumSize = new(9999, 9999)
             };
 
@@ -46,7 +46,7 @@ namespace OhGeeCD.UI
 
         public event EventHandler<SoundEventArgs>? SoundEvent;
 
-        private Job selectedJob => manager.Jobs[selectedJobIndex];
+        private Job SelectedJob => manager.Jobs[selectedJobIndex];
 
         public void Dispose()
         {
@@ -161,7 +161,7 @@ namespace OhGeeCD.UI
             if (ImGui.InputDouble("Early Callout##" + action.RecastGroup, ref earlyCallout, 0.1, 0.1, "%.1f s"))
             {
                 if (earlyCallout < 0) earlyCallout = 0;
-                if (earlyCallout > action.Recast.TotalSeconds) earlyCallout = action.Recast.TotalSeconds;
+                if (earlyCallout > action.Recast) earlyCallout = action.Recast;
                 action.EarlyCallout = earlyCallout;
             }
             DrawHelper.DrawHelpText("This will give the callout earlier than the ability will be available.");
@@ -307,7 +307,7 @@ namespace OhGeeCD.UI
             ImGui.SetWindowFontScale(1.0f);
             ImGui.Separator();
 
-            var orderedActions = selectedJob.Actions.OrderBy(a => a.Abilities[0].Name).ToList();
+            var orderedActions = SelectedJob.Actions.OrderBy(a => a.Abilities[0].Name).ToList();
             if (ImGui.BeginChild("itemSelection", new Vector2(200 * ImGui.GetIO().FontGlobalScale, ImGui.GetContentRegionAvail().Y)))
             {
                 if (ImGui.BeginTable("itemTable", 1, ImGuiTableFlags.None))
@@ -325,7 +325,7 @@ namespace OhGeeCD.UI
                             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, DrawHelper.Color(*color));
                         }
 
-                        DrawOGCDActionItemEntry(selectedJob, action);
+                        DrawOGCDActionItemEntry(SelectedJob, action);
                         ImGui.EndGroup();
                         if (ImGui.IsItemClicked())
                         {
@@ -340,7 +340,7 @@ namespace OhGeeCD.UI
             ImGui.SameLine();
 
             ImGui.BeginChild("settings", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y));
-            var recastAction = selectedJob.Actions.SingleOrDefault(a => a.RecastGroup == selectedRecastGroup) ?? orderedActions.First();
+            var recastAction = SelectedJob.Actions.SingleOrDefault(a => a.RecastGroup == selectedRecastGroup) ?? orderedActions.First();
             selectedRecastGroup = recastAction.RecastGroup;
             DrawOGCDactionSettings(manager.Jobs[selectedJobIndex], recastAction);
             ImGui.EndChild();
@@ -474,7 +474,7 @@ namespace OhGeeCD.UI
             ImGui.SameLine();
             if (ImGui.Button("+##" + action.RecastGroup))
             {
-                action.SoundEffect = action.SoundEffect + 1;
+                action.SoundEffect++;
                 if (action.SoundEffect > 80) action.SoundEffect = 80;
                 SoundEvent?.Invoke(null, new SoundEventArgs(null, action.SoundEffect, null) { ForceSound = true });
             }
@@ -482,7 +482,7 @@ namespace OhGeeCD.UI
             ImGui.SameLine();
             if (ImGui.Button("-##" + action.RecastGroup))
             {
-                action.SoundEffect = action.SoundEffect - 1;
+                action.SoundEffect--;
                 if (action.SoundEffect < 0) action.SoundEffect = 0;
                 SoundEvent?.Invoke(null, new SoundEventArgs(null, action.SoundEffect, null) { ForceSound = true });
             }
@@ -503,8 +503,10 @@ namespace OhGeeCD.UI
             ImGui.SameLine();
             if (ImGui.Button("Open File##" + action.RecastGroup))
             {
-                var fileDialog = new OpenFileDialog();
-                fileDialog.Filter = "MP3 Files|*.mp3|OGG Files|*.ogg|WAV Files|*.wav";
+                var fileDialog = new OpenFileDialog
+                {
+                    Filter = "MP3 Files|*.mp3|OGG Files|*.ogg|WAV Files|*.wav"
+                };
 
                 if (fileDialog.ShowDialog() == DialogResult.OK)
                 {

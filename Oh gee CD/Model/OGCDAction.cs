@@ -28,10 +28,9 @@ namespace OhGeeCD.Model
             cts = null!;
         }
 
-        public OGCDAction(OGCDAbility ability, TimeSpan recast, byte recastGroup, uint currentJobLevel)
+        public OGCDAction(OGCDAbility ability, byte recastGroup, uint currentJobLevel)
         {
             Abilities.Add(ability);
-            Recast = recast;
             TextToSpeechName = ability.Name;
             RecastGroup = recastGroup;
             this.currentJobLevel = currentJobLevel;
@@ -71,7 +70,7 @@ namespace OhGeeCD.Model
         public short MaxCharges { get; private set; }
 
         [JsonIgnore]
-        public TimeSpan Recast { get; set; }
+        public float Recast { get; private set; }
 
         [JsonProperty]
         public byte RecastGroup { get; set; }
@@ -98,7 +97,7 @@ namespace OhGeeCD.Model
         {
             foreach (var ability in Abilities)
             {
-                PluginLog.Debug($"Id:{ability.Id} | Name:{ability.Name} | MaxCharges:{MaxCharges} | CD:{Recast.TotalSeconds}s | ReqLevel:{ability.RequiredJobLevel} | CanCast:{ability.IsAvailable} | OverWritesOrOverwritten:{ability.OverwritesOrIsOverwritten}");
+                PluginLog.Debug($"Id:{ability.Id} | Name:{ability.Name} | MaxCharges:{MaxCharges} | ReqLevel:{ability.RequiredJobLevel} | CanCast:{ability.IsAvailable} | OverWritesOrOverwritten:{ability.OverwritesOrIsOverwritten}");
             }
         }
 
@@ -145,14 +144,15 @@ namespace OhGeeCD.Model
 
                 int soundsToPlay = 0;
                 bool resetEarlyCallout = true;
+                Recast = recastGroupDetail->Total / MaxCharges;
                 PluginLog.Debug("Start:" + RecastGroup + "|" + CurrentCharges + "/" + MaxCharges);
                 do
                 {
-                    var newCoolDown = (Recast.TotalSeconds * MaxCharges - recastGroupDetail->Elapsed) % Recast.TotalSeconds;
+                    var newCoolDown = (Recast * MaxCharges - recastGroupDetail->Elapsed) % Recast;
                     resetEarlyCallout = resetEarlyCallout || CooldownTimer < newCoolDown;
                     CooldownTimer = newCoolDown;
 
-                    var newCharges = (short)Math.Floor(recastGroupDetail->Elapsed / Recast.TotalSeconds);
+                    var newCharges = (short)Math.Floor(recastGroupDetail->Elapsed / Recast);
                     if (newCharges < CurrentCharges)
                     {
                         soundsToPlay++;

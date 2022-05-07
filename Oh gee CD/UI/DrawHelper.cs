@@ -137,7 +137,7 @@ namespace OhGeeCD.UI
 
             if (action.CooldownTimer > 0 && (flags & DrawOGCDFlags.DrawCircle) != 0)
             {
-                var res = (float)(1 - ((float)(action.CooldownTimer / action.Recast.TotalSeconds))) * 360;
+                var res = (float)(1 - ((float)(action.CooldownTimer / action.Recast))) * 360;
 
                 drawList.PushClipRect(position, new Vector2(position.X + size, position.Y + size), false);
                 drawList.PathLineTo(new Vector2(position.X + (size / 2), position.Y + (size / 2)));

@@ -37,7 +37,7 @@ namespace OhGeeCD.UI
             IsOpen = true;
         }
 
-        private Job? activeJob => playerManager.Jobs.SingleOrDefault(j => j.IsActive);
+        private Job? ActiveJob => playerManager.Jobs.SingleOrDefault(j => j.IsActive);
 
         public void Dispose()
         {
@@ -46,21 +46,21 @@ namespace OhGeeCD.UI
 
         public override void Draw()
         {
-            if (!playerConditionManager.ProcessingActive() || !playerManager.DrawOGCDTracker || activeJob == null) return;
+            if (!playerConditionManager.ProcessingActive() || !playerManager.DrawOGCDTracker || ActiveJob == null) return;
 
             float size = ((ImGui.GetWindowContentRegionMax().Y - ImGui.GetWindowContentRegionMin().Y));
             float totalWidth = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X - size;
-            var currentActions = activeJob.Actions.Where(j => j.Visualize && j.CooldownTimer > 0).OrderBy(a => a.CooldownTimer);
+            var currentActions = ActiveJob.Actions.Where(j => j.Visualize && j.CooldownTimer > 0).OrderBy(a => a.CooldownTimer);
 
             if (playerManager.TrackOGCDGroupsSeparately)
             {
-                var allBars = playerManager.OGCDBars.Where(b => b.JobRecastGroupIds.ContainsKey(activeJob.Id)
-                    && (b.JobRecastGroupIds[activeJob.Id]?.Any(j => activeJob.Actions.Where(j => j.Visualize).Select(a => a.RecastGroup).Contains(j)) ?? false))
+                var allBars = playerManager.OGCDBars.Where(b => b.JobRecastGroupIds.ContainsKey(ActiveJob.Id)
+                    && (b.JobRecastGroupIds[ActiveJob.Id]?.Any(j => ActiveJob.Actions.Where(j => j.Visualize).Select(a => a.RecastGroup).Contains(j)) ?? false))
                     .ToList();
 
-                var actionsNotOnBar = activeJob.Actions.Where(a => a.Visualize
-                    && !allBars.Where(b => b.JobRecastGroupIds.ContainsKey(activeJob.Id))
-                    .SelectMany(b => b.JobRecastGroupIds[activeJob.Id]).Contains(a.RecastGroup)).ToList();
+                var actionsNotOnBar = ActiveJob.Actions.Where(a => a.Visualize
+                    && !allBars.Where(b => b.JobRecastGroupIds.ContainsKey(ActiveJob.Id))
+                    .SelectMany(b => b.JobRecastGroupIds[ActiveJob.Id]).Contains(a.RecastGroup)).ToList();
 
                 if (!allBars.Any() && !actionsNotOnBar.Any()) return;
 
@@ -70,14 +70,14 @@ namespace OhGeeCD.UI
                     {
                         JobRecastGroupIds = new Dictionary<uint, List<byte>>()
                         {
-                            {activeJob.Id, actionsNotOnBar.Select(a=>a.RecastGroup).ToList() }
+                            {ActiveJob.Id, actionsNotOnBar.Select(a=>a.RecastGroup).ToList() }
                         }
                     });
                 }
 
                 int barId = 0;
                 allBars = allBars.Where(b => b.DrawOnTracker).ToList();
-                size /= allBars.Count();
+                size /= allBars.Count;
                 var maxTextSize = allBars.Select(b => ImGui.CalcTextSize(b.Name)).OrderBy(v => v.X).Last();
                 totalWidth = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X - size - maxTextSize.X - 5;
 
@@ -97,12 +97,12 @@ namespace OhGeeCD.UI
 
                     DrawLine(xMinPos + maxTextSize.X + 5, xMaxPos, yCenterPos, drawList);
 
-                    foreach (var action in bar.JobRecastGroupIds[activeJob.Id])
+                    foreach (var action in bar.JobRecastGroupIds[ActiveJob.Id])
                     {
                         var ogcdaction = currentActions.SingleOrDefault(a => a.RecastGroup == action);
                         if (ogcdaction == null) continue;
 
-                        var position = totalWidth - (totalWidth * (ogcdaction.CooldownTimer / ogcdaction.Recast.TotalSeconds));
+                        var position = totalWidth - (totalWidth * (ogcdaction.CooldownTimer / ogcdaction.Recast));
                         actionPositions.Add(ogcdaction, position);
                     }
 
@@ -138,7 +138,7 @@ namespace OhGeeCD.UI
 
                 foreach (var ogcdaction in currentActions.Where(a => a.CooldownTimer > 0).OrderByDescending(a => a.CooldownTimer))
                 {
-                    var position = totalWidth - (totalWidth * (ogcdaction.CooldownTimer / ogcdaction.Recast.TotalSeconds));
+                    var position = totalWidth - (totalWidth * (ogcdaction.CooldownTimer / ogcdaction.Recast));
                     actionPositions.Add(ogcdaction, position);
                     drawHelper.DrawOGCDIcon(ogcdaction,
                         new System.Numerics.Vector2(ImGui.GetWindowContentRegionMin().X + (float)position,
