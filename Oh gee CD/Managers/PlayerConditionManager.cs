@@ -59,7 +59,7 @@ namespace OhGeeCD.Managers
         public bool InDuty => condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56] || condition[ConditionFlag.BoundByDuty95] || condition[ConditionFlag.BoundToDuty97];
 
         [JsonIgnore]
-        public bool InPvP => pvpTerritories.Contains(clientState.TerritoryType);
+        public bool InPvP => pvpTerritories.Contains(clientState.TerritoryType) || clientState.IsPvP;
 
         public void Dispose()
         {
