@@ -4,6 +4,7 @@ using Dalamud.Hooking;
 using Dalamud.Utility.Signatures;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 
 namespace OhGeeCD.Managers
 {
@@ -14,6 +15,7 @@ namespace OhGeeCD.Managers
 
         private readonly Condition condition;
         private readonly ClientState clientState;
+        private readonly List<uint> pvpTerritories;
 
 
         // serialization constructor
@@ -21,13 +23,15 @@ namespace OhGeeCD.Managers
         {
             condition = null!;
             clientState = null!;
+            pvpTerritories = null!;
         }
 
-        public PlayerConditionManager(Condition condition, ClientState clientState)
+        public PlayerConditionManager(Condition condition, ClientState clientState, List<uint> pvpTerritories)
         {
             this.condition = condition;
             this.clientState = clientState;
             SignatureHelper.Initialise(this);
+            this.pvpTerritories = pvpTerritories;
 
             actorControlSelfHook?.Enable();
         }
@@ -55,7 +59,7 @@ namespace OhGeeCD.Managers
         public bool InDuty => condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56] || condition[ConditionFlag.BoundByDuty95] || condition[ConditionFlag.BoundToDuty97];
 
         [JsonIgnore]
-        public bool InPvP => clientState.IsPvP || condition[ConditionFlag.PvPDisplayActive] || condition[ConditionFlag.InDuelingArea];
+        public bool InPvP => pvpTerritories.Contains(clientState.TerritoryType);
 
         public void Dispose()
         {

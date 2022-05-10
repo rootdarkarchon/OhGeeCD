@@ -95,10 +95,11 @@ namespace OhGeeCD
         private void InitializePlugin()
         {
             commandManager.AddHandler(commandName, new CommandInfo(OnCommand) { HelpMessage = "Opens Oh gee, CD configuration" });
-            playerConditionManager = new PlayerConditionManager(condition, clientState);
+            var dataLoader = new DataLoader(dataManager);
+            playerConditionManager = new PlayerConditionManager(condition, clientState, dataLoader.GetPvPTerritoryTypes());
             soundManager = new SoundManager(playerConditionManager);
 
-            playerManager = new PlayerManager(framework, new DataLoader(dataManager), clientState, soundManager, windowSystem, drawHelper, playerConditionManager);
+            playerManager = new PlayerManager(framework, dataLoader, clientState, soundManager, windowSystem, drawHelper, playerConditionManager);
             settingsUI = new SettingsUI(playerManager, soundManager, playerConditionManager, windowSystem, drawHelper);
             ogcdTracker = new OGCDTrackerUI(windowSystem, playerManager, playerConditionManager, drawHelper);
 

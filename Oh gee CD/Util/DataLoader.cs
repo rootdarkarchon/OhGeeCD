@@ -21,6 +21,20 @@ namespace OhGeeCD.Util
             this.dataManager = dataManager;
         }
 
+        public List<uint> GetPvPTerritoryTypes()
+        {
+            List<uint> pvpTerritories = new();
+            var territories = dataManager.Excel.GetSheet<TerritoryType>();
+            foreach (TerritoryType? territory in territories!)
+            {
+                if (territory?.IsPvpZone ?? false)
+                {
+                    pvpTerritories.Add(territory.RowId);
+                }
+            }
+            return pvpTerritories;
+        }
+
         public unsafe List<Job> LoadDataFromLumina()
         {
             Resolver.Initialize();
@@ -48,7 +62,7 @@ namespace OhGeeCD.Util
                 }
             }
 
-            if(attempts == 10)
+            if (attempts == 10)
             {
                 throw new Exception("Could not load data from lumina successfully. Try reloading the plugin.");
             }
