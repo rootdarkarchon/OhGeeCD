@@ -160,8 +160,7 @@ namespace OhGeeCD.UI
             ImGui.SetNextItemWidth(150);
             if (ImGui.InputDouble("Early Callout##" + action.RecastGroup, ref earlyCallout, 0.1, 0.1, "%.1f s"))
             {
-                if (earlyCallout < 0) earlyCallout = 0;
-                if (earlyCallout > action.Recast) earlyCallout = action.Recast;
+                //if (earlyCallout > action.Recast) earlyCallout = action.Recast;
                 action.EarlyCallout = earlyCallout;
             }
             DrawHelper.DrawHelpText("This will give the callout earlier than the ability will be available.");

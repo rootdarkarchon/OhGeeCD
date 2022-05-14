@@ -1,4 +1,5 @@
 ﻿using Dalamud.Data;
+using Dalamud.Logging;
 using ImGuiNET;
 using ImGuiScene;
 using Lumina.Data.Files;
@@ -23,6 +24,7 @@ namespace OhGeeCD.UI
         public const int ICON_DEFAULT_SIZE = 64;
         public readonly Dictionary<uint, TextureWrap> textures = new();
         private readonly DataManager dataManager;
+        private Dictionary<OGCDAction, DateTime> LastActionCooldown = new();
 
         public DrawHelper(DataManager dataManager)
         {
@@ -135,6 +137,15 @@ namespace OhGeeCD.UI
             drawList.PathLineTo(new Vector2(position.X + 1, position.Y + size));
             drawList.PathStroke(Color(0, 0, 0, alpha), ImDrawFlags.Closed, 2);
 
+            /*if (action.CooldownTimer > 0 && LastActionCooldown.ContainsKey(action))
+            {
+                LastActionCooldown.Remove(action);
+            }
+            else if (action.CooldownTimer == 0 && !LastActionCooldown.ContainsKey(action))
+            {
+                LastActionCooldown.Add(action, DateTime.Now);
+            }*/
+
             if (action.CooldownTimer > 0 && (flags & DrawOGCDFlags.DrawCircle) != 0)
             {
                 var res = (float)(1 - ((float)(action.CooldownTimer / action.Recast))) * 360;
@@ -154,6 +165,20 @@ namespace OhGeeCD.UI
                 drawList.PathStroke(Color(255, 255, 255, alpha), ImDrawFlags.None, 2);
                 drawList.PopClipRect();
             }
+
+            /*if (LastActionCooldown.ContainsKey(action))
+            {
+                double timeElapsed = (DateTime.Now - LastActionCooldown[action]).TotalSeconds % 1.0;
+                float thickness = 4 * (size / (float)ICON_DEFAULT_SIZE);
+                var innerStart = new Vector2(position.X + thickness / 2, position.Y + thickness / 2);
+                var innerEnd = new Vector2(position.X + size - thickness / 2, position.Y + size - thickness / 2);
+                var segments = 4;
+
+                DrawDashedLine(drawList, innerStart, new Vector2(innerEnd.X, innerStart.Y), segments, timeElapsed, Color(255, 255, 0, (byte)(255 * transparency)), thickness);
+                //DrawDashedLine(drawList, new Vector2(innerEnd.X, innerStart.Y), innerEnd, segments, timeElapsed, Color(255, 255, 0, (byte)(255 * transparency)), thickness);
+                //DrawDashedLine(drawList, innerEnd, new Vector2(innerStart.X, innerEnd.Y), segments, timeElapsed, Color(255, 255, 0, (byte)(255 * transparency)), thickness);
+                //DrawDashedLine(drawList, new Vector2(innerStart.X, innerEnd.Y), innerStart, segments, timeElapsed, Color(255, 255, 0, (byte)(255 * transparency)), thickness);
+            }*/
 
             if (action.MaxCharges > 1 && (flags & DrawOGCDFlags.DrawCharges) != 0)
             {
@@ -188,6 +213,45 @@ namespace OhGeeCD.UI
             }
 
             drawList.PopClipRect();
+        }
+
+        private void DrawDashedLine(ImDrawListPtr drawList, Vector2 from, Vector2 to, int segments, double segmentOffset, uint color, float thickness)
+        {
+            double totalLength = Math.Sqrt(Math.Pow(to.X - from.X, 2) + Math.Pow(to.Y - from.Y, 2));
+            double segmentLength = totalLength / segments;
+            List<(Vector2, Vector2)> segmentPoints = new List<(Vector2, Vector2)>();
+
+            var segOffsetDistance = segmentLength * segmentOffset;
+            var t = segOffsetDistance / totalLength;
+            Vector2 segmentStart = new Vector2((float)((1 - t) * from.X + t * to.X), (float)((1 - t) * from.Y + t * to.Y));
+            segmentPoints.Add((from, segmentStart));
+            for (int i = 0; i <= segments - 2; i++)
+            {
+                totalLength = Math.Sqrt(Math.Pow(to.X - segmentStart.X, 2) + Math.Pow(to.Y - segmentStart.Y, 2));
+                t = segmentLength / totalLength;
+                Vector2 segmentPoint = new Vector2((float)((1 - t) * segmentStart.X + t * to.X), (float)((1 - t) * segmentStart.Y + t * to.Y));
+                segmentPoints.Add((segmentStart, segmentPoint));
+                segmentStart = segmentPoint;
+            }
+            t = (segmentLength) / totalLength;
+            segmentStart = new Vector2((float)((1 - t) * to.X + t * from.X), (float)((1 - t) * to.Y + t * from.Y));
+            segmentPoints.Add((segmentStart, to));
+
+            for (int i = 0; i < segmentPoints.Count; i++)
+            {
+                if (i % 2 != 0)
+                {
+                    drawList.PathLineTo(new Vector2(segmentPoints[i].Item1.X, segmentPoints[i].Item1.Y + 5));
+                    drawList.PathLineTo(new Vector2(segmentPoints[i].Item2.X, segmentPoints[i].Item2.Y + 5));
+                    drawList.PathStroke(Color(255, 0, 0, 255), ImDrawFlags.None, thickness);
+                }
+                else
+                {
+                    drawList.PathLineTo(segmentPoints[i].Item1);
+                    drawList.PathLineTo(segmentPoints[i].Item2);
+                    drawList.PathStroke(color, ImDrawFlags.None, thickness);
+                }
+            }
         }
 
         private TextureWrap? GetImGuiTextureHqIcon(uint iconId)

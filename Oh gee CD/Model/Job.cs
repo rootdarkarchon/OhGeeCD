@@ -62,7 +62,7 @@ namespace OhGeeCD.Model
         public void MakeActive(uint level = uint.MaxValue)
         {
             PluginLog.Debug($"Job now active: {Abbreviation}/{ParentAbbreviation}");
-            if(level != uint.MaxValue)
+            if (level != uint.MaxValue)
                 SetLevel(level);
             foreach (var action in Actions)
             {

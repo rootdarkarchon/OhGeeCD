@@ -5,7 +5,6 @@ using OhGeeCD.Interfaces;
 using OhGeeCD.Util;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +18,7 @@ namespace OhGeeCD.Model
         private CancellationTokenSource cts;
         private uint currentJobLevel;
         private double earlyCallout = 0.5;
+        private const double UPDATE_LOOP_MS = 50;
 
         /// <summary>
         /// serialization constructor
@@ -107,10 +107,11 @@ namespace OhGeeCD.Model
             cts?.Cancel();
         }
 
-        public void MakeActive(uint currentJobLevel)
+        public unsafe void MakeActive(uint currentJobLevel)
         {
             this.currentJobLevel = currentJobLevel;
             MaxCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, currentJobLevel);
+            Recast = ActionManager.Instance()->GetRecastGroupDetail(RecastGroup)->Total / MaxCharges;
             CurrentCharges = MaxCharges;
             foreach (var ability in Abilities)
             {
@@ -174,7 +175,7 @@ namespace OhGeeCD.Model
                         }
                     }
 
-                    Thread.Sleep(50);
+                    Thread.Sleep((int)UPDATE_LOOP_MS);
                     if (cts.IsCancellationRequested)
                     {
                         PluginLog.Debug("Cancel:" + RecastGroup);
@@ -185,10 +186,16 @@ namespace OhGeeCD.Model
                     }
                 } while (recastGroupDetail->IsActive == 1 && !cts.IsCancellationRequested && CurrentCharges != MaxCharges);
 
+                // loop remaining cooldowntimer down
+                while (CooldownTimer > 0)
+                {
+                    CooldownTimer -= UPDATE_LOOP_MS / 1000;
+                    Thread.Sleep((int)UPDATE_LOOP_MS);
+                }
+
                 CurrentCharges = MaxCharges;
                 CooldownTimer = 0;
 
-                Thread.Sleep(TimeSpan.FromSeconds(EarlyCallout));
                 PluginLog.Debug("Ended:" + RecastGroup + "|" + "|Cancel:" + cts.IsCancellationRequested + "|Queue:" + soundsToPlay);
             }, cts.Token);
         }
