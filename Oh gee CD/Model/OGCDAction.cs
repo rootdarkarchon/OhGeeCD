@@ -5,6 +5,7 @@ using OhGeeCD.Interfaces;
 using OhGeeCD.Util;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -135,6 +136,7 @@ namespace OhGeeCD.Model
             {
                 return;
             }
+
             cts = new CancellationTokenSource();
             CountdownTask = Task.Run(() =>
             {
@@ -148,8 +150,8 @@ namespace OhGeeCD.Model
                 PluginLog.Debug("Start:" + RecastGroup + "|" + CurrentCharges + "/" + MaxCharges);
                 do
                 {
-                    var newCoolDown = (Recast * MaxCharges - recastGroupDetail->Elapsed) % Recast;
-                    resetEarlyCallout = resetEarlyCallout || CooldownTimer < newCoolDown;
+                    var newCoolDown = (recastGroupDetail->Total - recastGroupDetail->Elapsed) % Recast;
+                    resetEarlyCallout |= CooldownTimer < newCoolDown;
                     CooldownTimer = newCoolDown;
 
                     var newCharges = (short)Math.Floor(recastGroupDetail->Elapsed / Recast);
@@ -166,6 +168,10 @@ namespace OhGeeCD.Model
                         PlaySound();
                         resetEarlyCallout = false;
                         soundsToPlay--;
+                        if (soundsToPlay == 0)
+                        {
+                            cts.Cancel();
+                        }
                     }
 
                     Thread.Sleep(50);
@@ -182,6 +188,7 @@ namespace OhGeeCD.Model
                 CurrentCharges = MaxCharges;
                 CooldownTimer = 0;
 
+                Thread.Sleep(TimeSpan.FromSeconds(EarlyCallout));
                 PluginLog.Debug("Ended:" + RecastGroup + "|" + "|Cancel:" + cts.IsCancellationRequested + "|Queue:" + soundsToPlay);
             }, cts.Token);
         }

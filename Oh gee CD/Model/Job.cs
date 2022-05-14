@@ -28,9 +28,6 @@ namespace OhGeeCD.Model
         public uint Id { get; set; }
 
         [JsonIgnore]
-        public bool IsActive { get; private set; }
-
-        [JsonIgnore]
         public uint Level { get; private set; }
 
         [JsonIgnore]
@@ -62,10 +59,11 @@ namespace OhGeeCD.Model
             }
         }
 
-        public void MakeActive()
+        public void MakeActive(uint level = uint.MaxValue)
         {
             PluginLog.Debug($"Job now active: {Abbreviation}/{ParentAbbreviation}");
-            IsActive = true;
+            if(level != uint.MaxValue)
+                SetLevel(level);
             foreach (var action in Actions)
             {
                 action.MakeActive(Level);
@@ -74,7 +72,6 @@ namespace OhGeeCD.Model
 
         public void MakeInactive()
         {
-            IsActive = false;
             foreach (var action in Actions)
             {
                 action.MakeInactive();

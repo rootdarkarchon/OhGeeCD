@@ -94,7 +94,7 @@ namespace OhGeeCD.UI
             show &= bar.DrawOGCDBar;
             if (!show) return;
 
-            var job = playerManager.Jobs.SingleOrDefault(j => j.IsActive);
+            var job = playerManager.ActiveJob;
             if (job == null) return;
 
             var jobActions = job.Actions.Where(j => j.Visualize && j.Abilities.Any(a => a.IsAvailable)).ToArray();

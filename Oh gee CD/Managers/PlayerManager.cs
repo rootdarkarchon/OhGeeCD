@@ -30,10 +30,6 @@ namespace OhGeeCD.Managers
 
         private DateTime lastFrameworkUpdate = DateTime.MinValue;
 
-        private string lastJob = string.Empty;
-
-        private uint lastLevel = 0;
-
         private readonly SoundManager soundManager;
 
         /// <summary>
@@ -66,6 +62,7 @@ namespace OhGeeCD.Managers
         public bool DrawOGCDTracker { get; set; } = false;
         public List<Job> Jobs { get; set; } = new();
         public List<OGCDBar> OGCDBars { get; set; } = new();
+        public Job? ActiveJob { get; private set; }
 
         [JsonIgnore]
         public bool OGCDTrackerInEditMode { get; internal set; }
@@ -125,22 +122,17 @@ namespace OhGeeCD.Managers
         private unsafe void CheckRecastGroups()
         {
             var actionManager = ActionManager.Instance();
-            Job? activeJob = null;
-            activeJob = Jobs.SingleOrDefault(j => j.IsActive);
-            if (activeJob != null)
+            var actions = ActiveJob?.Actions?.Where(a => a.Abilities.Any(ab => ab.IsAvailable)) ?? Array.Empty<OGCDAction>();
+
+            Parallel.ForEach(actions, action =>
             {
-                var actions = activeJob.Actions.Where(a => a.Abilities.Any(ab => ab.IsAvailable));
+                var groupDetail = actionManager->GetRecastGroupDetail(action.RecastGroup);
 
-                foreach (var action in actions)
+                if ((action.Visualize || action.TextToSpeechEnabled || action.SoundEffectEnabled) && groupDetail->IsActive != 0)
                 {
-                    var groupDetail = actionManager->GetRecastGroupDetail(action.RecastGroup);
-
-                    if ((action.Visualize || action.TextToSpeechEnabled || action.SoundEffectEnabled) && groupDetail->IsActive != 0)
-                    {
-                        action.StartCountdown(actionManager);
-                    }
+                    action.StartCountdown(actionManager);
                 }
-            }
+            });
         }
 
         private void ClientState_TerritoryChanged(object? sender, ushort e)
@@ -159,19 +151,20 @@ namespace OhGeeCD.Managers
             bool triggerFastUpdate = conditionState.ProcessingActive() && framework.LastUpdateUTC > lastCheckUpdate + TimeSpan.FromMilliseconds(500);
             bool triggerGeneralUpdate = framework.LastUpdateUTC > lastFrameworkUpdate + TimeSpan.FromSeconds(1);
 
-            if (!triggerSlowUpdate && !triggerFastUpdate && !triggerGeneralUpdate || initialized == false)
+            if ((!triggerSlowUpdate && !triggerFastUpdate && !triggerGeneralUpdate) || initialized == false)
             {
                 return;
             }
 
             lastFrameworkUpdate = framework.LastUpdateUTC;
 
+            // return if player does not exist
             if (clientState.LocalPlayer?.ClassJob?.GameData == null) return;
-            if (lastJob != clientState.LocalPlayer.ClassJob.GameData.Abbreviation || lastLevel != clientState.LocalPlayer.Level)
+            // check for jobswitch or level up or down (sync)
+            if (ActiveJob?.Abbreviation != clientState.LocalPlayer.ClassJob.GameData.Abbreviation || ActiveJob?.Level != clientState.LocalPlayer.Level)
             {
-                lastLevel = clientState.LocalPlayer.Level;
-                lastJob = clientState.LocalPlayer.ClassJob.GameData.Abbreviation;
-                UpdateJobs();
+                ActiveJob = Jobs.FirstOrDefault(j => j.Abbreviation == clientState.LocalPlayer.ClassJob.GameData.Abbreviation);
+                UpdateJobs(clientState.LocalPlayer.Level);
             }
 
             if (!triggerSlowUpdate && !triggerFastUpdate)
@@ -184,19 +177,12 @@ namespace OhGeeCD.Managers
             CheckRecastGroups();
         }
 
-        private void UpdateJobs()
+        private void UpdateJobs(uint level = uint.MaxValue)
         {
-            foreach (var job in Jobs)
+            ActiveJob?.MakeActive(level);
+            foreach (var job in Jobs.Where(j => j != ActiveJob))
             {
-                if (job.Abbreviation == lastJob || job.ParentAbbreviation == lastJob)
-                {
-                    job.SetLevel(lastLevel);
-                    job.MakeActive();
-                }
-                else
-                {
-                    job.MakeInactive();
-                }
+                job.MakeInactive();
             }
         }
     }

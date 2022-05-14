@@ -37,7 +37,7 @@ namespace OhGeeCD.UI
             IsOpen = true;
         }
 
-        private Job? ActiveJob => playerManager.Jobs.SingleOrDefault(j => j.IsActive);
+        private Job? ActiveJob => playerManager.ActiveJob;
 
         public void Dispose()
         {
