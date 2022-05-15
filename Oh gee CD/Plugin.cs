@@ -111,7 +111,10 @@ namespace OhGeeCD
             configuration.RestoreConfiguration(playerManager);
             configuration.RestoreConfiguration(playerConditionManager);
             configuration.RestoreConfiguration(soundManager);
-            configuration.DisposeAndUpdateWithNewEntities(playerManager, soundManager, playerConditionManager);
+            if (configuration.PlayerManager != playerManager)
+            {
+                configuration.DisposeAndUpdateWithNewEntities(playerManager, soundManager, playerConditionManager);
+            }
 
             pluginInterface.UiBuilder.Draw += DrawUI;
             pluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
