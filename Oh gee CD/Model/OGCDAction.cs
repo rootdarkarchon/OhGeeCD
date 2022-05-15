@@ -35,8 +35,6 @@ namespace OhGeeCD.Model
             TextToSpeechName = ability.Name;
             RecastGroup = recastGroup;
             this.currentJobLevel = currentJobLevel;
-            MaxCharges = (short)ActionManager.GetMaxCharges(ability.Id, currentJobLevel);
-            CurrentCharges = MaxCharges;
             cts = new CancellationTokenSource();
         }
 
@@ -66,6 +64,9 @@ namespace OhGeeCD.Model
 
         [JsonProperty]
         public uint IconToDraw { get; set; } = 0;
+
+        [JsonIgnore]
+        public short MaxCurrentCharges { get; private set; }
 
         [JsonIgnore]
         public short MaxCharges { get; private set; }
@@ -98,7 +99,7 @@ namespace OhGeeCD.Model
         {
             foreach (var ability in Abilities)
             {
-                PluginLog.Debug($"Id:{ability.Id} | Name:{ability.Name} | MaxCharges:{MaxCharges} | ReqLevel:{ability.RequiredJobLevel} | CanCast:{ability.IsAvailable} | OverWritesOrOverwritten:{ability.OverwritesOrIsOverwritten}");
+                PluginLog.Debug($"Id:{ability.Id} | Name:{ability.Name} | MaxCharges:{MaxCurrentCharges} | ReqLevel:{ability.RequiredJobLevel} | CanCast:{ability.IsAvailable} | OverWritesOrOverwritten:{ability.OverwritesOrIsOverwritten}");
             }
         }
 
@@ -110,9 +111,9 @@ namespace OhGeeCD.Model
         public unsafe void MakeActive(uint currentJobLevel)
         {
             this.currentJobLevel = currentJobLevel;
-            MaxCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, currentJobLevel);
-            Recast = ActionManager.Instance()->GetRecastGroupDetail(RecastGroup)->Total / MaxCharges;
-            CurrentCharges = MaxCharges;
+            MaxCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, 90);
+            MaxCurrentCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, currentJobLevel);
+            CurrentCharges = MaxCurrentCharges;
             foreach (var ability in Abilities)
             {
                 ability.CurrentJobLevel = currentJobLevel;
@@ -123,7 +124,6 @@ namespace OhGeeCD.Model
         public void MakeInactive()
         {
             cts?.Cancel();
-            cts = new CancellationTokenSource();
         }
 
         public void SetTextToSpeechName(string newname)
@@ -142,16 +142,19 @@ namespace OhGeeCD.Model
             CountdownTask = Task.Run(() =>
             {
                 var recastGroupDetail = actionManager->GetRecastGroupDetail(RecastGroup);
-                //CurrentCharges = (short)Math.Floor(recastGroupDetail->Elapsed / Recast.TotalSeconds);
-                //if (CurrentCharges == MaxCharges || recastGroupDetail->IsActive != 1) return;
 
                 int soundsToPlay = 0;
                 bool resetEarlyCallout = true;
+
+                //MaxCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, 90);
+                //MaxCurrentCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, currentJobLevel);
+
                 Recast = recastGroupDetail->Total / MaxCharges;
-                PluginLog.Debug("Start:" + RecastGroup + "|" + CurrentCharges + "/" + MaxCharges);
+
+                PluginLog.Debug("Start:" + RecastGroup + "|" + CurrentCharges + "/" + MaxCurrentCharges + "/" + MaxCharges + "|" + Recast + ":" + recastGroupDetail->Total + ":" + recastGroupDetail->Elapsed);
                 do
                 {
-                    var newCoolDown = (recastGroupDetail->Total - recastGroupDetail->Elapsed) % Recast;
+                    var newCoolDown = (Recast * MaxCurrentCharges - recastGroupDetail->Elapsed) % Recast;
                     resetEarlyCallout |= CooldownTimer < newCoolDown;
                     CooldownTimer = newCoolDown;
 
@@ -176,15 +179,8 @@ namespace OhGeeCD.Model
                     }
 
                     Thread.Sleep((int)UPDATE_LOOP_MS);
-                    if (cts.IsCancellationRequested)
-                    {
-                        PluginLog.Debug("Cancel:" + RecastGroup);
-                    }
-                    else
-                    {
-                        recastGroupDetail = actionManager->GetRecastGroupDetail(RecastGroup);
-                    }
-                } while (recastGroupDetail->IsActive == 1 && !cts.IsCancellationRequested && CurrentCharges != MaxCharges);
+                    recastGroupDetail = actionManager->GetRecastGroupDetail(RecastGroup);
+                } while (recastGroupDetail->IsActive == 1 && !cts.IsCancellationRequested && CurrentCharges != MaxCurrentCharges);
 
                 // loop remaining cooldowntimer down
                 while (CooldownTimer > 0)
@@ -193,7 +189,7 @@ namespace OhGeeCD.Model
                     Thread.Sleep((int)UPDATE_LOOP_MS);
                 }
 
-                CurrentCharges = MaxCharges;
+                CurrentCharges = MaxCurrentCharges;
                 CooldownTimer = 0;
 
                 PluginLog.Debug("Ended:" + RecastGroup + "|" + "|Cancel:" + cts.IsCancellationRequested + "|Queue:" + soundsToPlay);

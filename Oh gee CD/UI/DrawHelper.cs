@@ -180,7 +180,7 @@ namespace OhGeeCD.UI
                 //DrawDashedLine(drawList, new Vector2(innerStart.X, innerEnd.Y), innerStart, segments, timeElapsed, Color(255, 255, 0, (byte)(255 * transparency)), thickness);
             }*/
 
-            if (action.MaxCharges > 1 && (flags & DrawOGCDFlags.DrawCharges) != 0)
+            if (action.MaxCurrentCharges > 1 && (flags & DrawOGCDFlags.DrawCharges) != 0)
             {
                 string cooldownString = action.CurrentCharges.ToString("0");
 

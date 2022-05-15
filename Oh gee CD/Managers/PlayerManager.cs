@@ -56,7 +56,7 @@ namespace OhGeeCD.Managers
             this.system = system;
             this.helper = helper;
             this.conditionState = conditionState;
-            conditionState.WipeDetected += (_, _) => UpdateJobs();
+            conditionState.WipeDetected += (_, _) => UpdateJobs(clientState!.LocalPlayer!.Level);
         }
 
         public bool DrawOGCDTracker { get; set; } = false;
@@ -140,7 +140,7 @@ namespace OhGeeCD.Managers
             Task.Run(() =>
             {
                 Thread.Sleep(5000);
-                UpdateJobs();
+                UpdateJobs(clientState!.LocalPlayer!.Level);
             });
         }
 
