@@ -32,3 +32,8 @@ This plugin serves the purpose of tracking your OGCD during gameplay. It feature
 * Built future proof
   * all data is read from the game data and is resilent against changes
   * class changes in patches will be loaded and adjusted in seamlessly
+
+## Installation
+
+- Add following link to your Dalamud [Repository URL](https://darkarchon.internet-box.ch:8443/plogon/plogonmaster.json)
+- Install Oh Gee, CD from the Available Plugins
