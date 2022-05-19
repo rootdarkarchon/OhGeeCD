@@ -30,6 +30,7 @@ namespace OhGeeCD
         private PlayerManager? playerManager;
         private SettingsUI? settingsUI;
         private SoundManager? soundManager;
+        private bool isDisposed = false;
 
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
@@ -59,6 +60,9 @@ namespace OhGeeCD
 
         public void Dispose()
         {
+            if (isDisposed) return;
+            isDisposed = true;
+
             configuration?.Save();
 
             pluginInterface.UiBuilder.Draw -= DrawUI;
@@ -94,6 +98,7 @@ namespace OhGeeCD
 
         private void InitializePlugin()
         {
+            isDisposed = false;
             commandManager.AddHandler(commandName, new CommandInfo(OnCommand) { HelpMessage = "Opens Oh gee, CD configuration" });
             var dataLoader = new DataLoader(dataManager);
             playerConditionManager = new PlayerConditionManager(condition, clientState, dataLoader.GetPvPTerritoryTypes());
