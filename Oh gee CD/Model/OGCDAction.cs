@@ -105,6 +105,7 @@ namespace OhGeeCD.Model
 
         public void Dispose()
         {
+            CooldownTimer = 0;
             cts?.Cancel();
         }
 
@@ -146,10 +147,8 @@ namespace OhGeeCD.Model
                 int soundsToPlay = 0;
                 bool resetEarlyCallout = true;
 
-                //MaxCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, 90);
-                //MaxCurrentCharges = (short)ActionManager.GetMaxCharges(Abilities[0].Id, currentJobLevel);
-
                 Recast = recastGroupDetail->Total / MaxCharges;
+                if (recastGroupDetail->Elapsed < 1) return;
 
                 PluginLog.Debug("Start:" + RecastGroup + "|" + CurrentCharges + "/" + MaxCurrentCharges + "/" + MaxCharges + "|" + Recast + ":" + recastGroupDetail->Total + ":" + recastGroupDetail->Elapsed);
                 do
