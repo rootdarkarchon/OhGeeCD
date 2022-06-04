@@ -119,12 +119,17 @@ namespace OhGeeCD.Model
             {
                 ability.CurrentJobLevel = currentJobLevel;
             }
+            CancelLoop();
+        }
+
+        private void CancelLoop()
+        {
             cts?.Cancel();
         }
 
         public void MakeInactive()
         {
-            cts?.Cancel();
+            CancelLoop();
         }
 
         public void SetTextToSpeechName(string newname)
@@ -171,18 +176,17 @@ namespace OhGeeCD.Model
                         PlaySound();
                         resetEarlyCallout = false;
                         soundsToPlay--;
-                        if (soundsToPlay == 0)
-                        {
-                            cts.Cancel();
-                        }
                     }
 
                     Thread.Sleep((int)UPDATE_LOOP_MS);
                     recastGroupDetail = actionManager->GetRecastGroupDetail(RecastGroup);
-                } while (recastGroupDetail->IsActive == 1 && !cts.IsCancellationRequested && CurrentCharges != MaxCurrentCharges);
+                } while (recastGroupDetail->IsActive == 1 
+                        && !cts.IsCancellationRequested 
+                        && CurrentCharges != MaxCurrentCharges
+                        && soundsToPlay > 0);
 
                 // loop remaining cooldowntimer down
-                while (CooldownTimer > 0)
+                while (CooldownTimer > 0 && !cts.IsCancellationRequested)
                 {
                     CooldownTimer -= UPDATE_LOOP_MS / 1000;
                     Thread.Sleep((int)UPDATE_LOOP_MS);
