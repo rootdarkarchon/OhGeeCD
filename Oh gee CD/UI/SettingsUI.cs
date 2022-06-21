@@ -399,6 +399,28 @@ namespace OhGeeCD.UI
                 ImGui.EndCombo();
             }
 
+            if (ImGui.BeginCombo("Visualization Option##" + action.RecastGroup, action.VisualizationStyle.ToString()))
+            {
+                foreach (var item in Enum.GetNames(typeof(OGCDVisualizationStyle)))
+                {
+                    var selected = action.VisualizationStyle.ToString() == item.ToString();
+                    if (ImGui.Selectable(item, action.VisualizationStyle.ToString() == item))
+                    {
+                        action.VisualizationStyle = Enum.Parse<OGCDVisualizationStyle>(item);
+                    }
+
+                    if (selected)
+                    {
+                        ImGui.SetItemDefaultFocus();
+                    }
+                }
+
+                ImGui.EndCombo();
+            }
+            DrawHelper.DrawHelpText($"This will adjust the visualization in OGCD bars.{Environment.NewLine}{OGCDVisualizationStyle.Always} = will always display the action in the bar." +
+                                    $"{Environment.NewLine}{OGCDVisualizationStyle.OnlyWhenChargesAvailable} = will only show it when you have charges available" +
+                                    $"{Environment.NewLine}{OGCDVisualizationStyle.OnlyWhenOnCooldown} = will only show when the ability is on cooldown");
+
             ImGui.NewLine();
         }
 

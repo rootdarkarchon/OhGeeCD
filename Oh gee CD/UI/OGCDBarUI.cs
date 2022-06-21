@@ -129,6 +129,12 @@ namespace OhGeeCD.UI
                 int yToMove = spreadPositionsVertical.Single(p => p.Key == y).Value;
 
                 var action = jobActions.Single(j => j.RecastGroup == actionID);
+                switch (action.VisualizationStyle)
+                {
+                    case OGCDVisualizationStyle.OnlyWhenChargesAvailable when action.CurrentCharges == 0:
+                    case OGCDVisualizationStyle.OnlyWhenOnCooldown when action.CurrentCharges == action.MaxCurrentCharges:
+                        continue;
+                }
                 drawHelper.DrawOGCDIcon(action, new Vector2(
                     ImGui.GetWindowContentRegionMin().X + (iconSize * xToMove) + (bar.HorizontalPadding * xToMove),
                     ImGui.GetWindowContentRegionMin().Y + (iconSize * yToMove) + (bar.VerticalPadding * yToMove)),

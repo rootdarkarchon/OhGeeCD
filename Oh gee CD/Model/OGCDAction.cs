@@ -11,6 +11,13 @@ using System.Threading.Tasks;
 
 namespace OhGeeCD.Model
 {
+    public enum OGCDVisualizationStyle
+    {
+        Always,
+        OnlyWhenChargesAvailable,
+        OnlyWhenOnCooldown
+    }
+
     [Serializable]
     public class OGCDAction : IDisposable, ISoundSource
     {
@@ -94,6 +101,9 @@ namespace OhGeeCD.Model
 
         [JsonProperty]
         public bool Visualize { get; set; } = false;
+
+        [JsonProperty]
+        public OGCDVisualizationStyle VisualizationStyle { get; set; } = OGCDVisualizationStyle.Always;
 
         public void Debug()
         {
@@ -180,8 +190,8 @@ namespace OhGeeCD.Model
 
                     Thread.Sleep((int)UPDATE_LOOP_MS);
                     recastGroupDetail = actionManager->GetRecastGroupDetail(RecastGroup);
-                } while (recastGroupDetail->IsActive == 1 
-                        && !cts.IsCancellationRequested 
+                } while (recastGroupDetail->IsActive == 1
+                        && !cts.IsCancellationRequested
                         && CurrentCharges != MaxCurrentCharges
                         && soundsToPlay > 0);
 
