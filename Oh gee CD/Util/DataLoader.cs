@@ -143,7 +143,8 @@ namespace OhGeeCD.Util
             for (uint i = 0; i < classJobs.RowCount; i++)
             {
                 var job = classJobs.GetRow(i);
-                if (job.IsLimitedJob || job.DohDolJobIndex >= 0 || job.ExpArrayIndex <= 0) continue;
+                if (job.IsLimitedJob || job.DohDolJobIndex >= 0 || job.ExpArrayIndex < 0) continue;
+
                 var jobinList = jobs.FirstOrDefault(j => j.Abbreviation == job.ClassJobParent?.Value?.Abbreviation.RawString);
                 if (jobinList == null)
                 {
