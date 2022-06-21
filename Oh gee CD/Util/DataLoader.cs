@@ -37,7 +37,6 @@ namespace OhGeeCD.Util
 
         public unsafe List<Job> LoadDataFromLumina()
         {
-            Resolver.Initialize();
             bool initialized = false;
             List<Job> jobs = new();
             // this sometimes crashes for no reason so we just keep repeating on endless loop
