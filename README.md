@@ -23,6 +23,7 @@ This plugin serves the purpose of tracking your OGCD during gameplay. It feature
     * Each ability can be linked to one bar
     * Bars are fully customizeable in size, position, layout etc. 
     * All OGCDs placed on a bar and visualized will show their cooldowns and animation for the icon
+    * OGCDs can be visualized or hidden based on condition (charges available, only on cooldown)
   * Visual notification: OGCD Tracker
     * Tracker with two modes for OGCD groups
       * Single-Line mode: all OGCD move from left to right on a single line
