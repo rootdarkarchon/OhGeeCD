@@ -115,6 +115,7 @@ namespace OhGeeCD.Managers
         public int RemoveOGCDBar(OGCDBar bar)
         {
             var barID = bar.Id;
+            bar.Dispose();
             OGCDBars.Remove(bar);
             return barID;
         }

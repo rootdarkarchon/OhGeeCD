@@ -124,9 +124,12 @@ namespace OhGeeCD.Util
                         var adjustedActionId = managerInstance->GetAdjustedActionId(ability.Id);
                         if (adjustedActionId != ability.Id)
                         {
-                            var otherAbility = job.Actions.SelectMany(j => j.Abilities).Single(a => a.Id == adjustedActionId);
+                            var otherAbility = job.Actions.SelectMany(j => j.Abilities).SingleOrDefault(a => a.Id == adjustedActionId);
                             ability.OtherAbility = otherAbility;
-                            otherAbility.OtherAbility = ability;
+                            if(otherAbility != null)
+                            {
+                                otherAbility.OtherAbility = ability;
+                            }
                         }
                     }
                 }
