@@ -91,6 +91,7 @@ namespace OhGeeCD.UI
         {
             bool show = playerConditionManager.ProcessingActive();
             show |= bar.InEditMode;
+            show |= drawHelper.InEditMode;
             show &= bar.DrawOGCDBar;
             if (!show) return;
 

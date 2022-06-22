@@ -44,6 +44,18 @@ namespace OhGeeCD.UI
             if (manager.OGCDBars.Count > 0) selectedOGCDIndex = 0;
         }
 
+        public override void OnClose()
+        {
+            foreach (var bar in manager.OGCDBars)
+            {
+                bar.InEditMode = false;
+            }
+
+            drawHelper.InEditMode = false;
+
+            base.OnClose();
+        }
+
         public event EventHandler<SoundEventArgs>? SoundEvent;
 
         private Job SelectedJob => manager.Jobs[selectedJobIndex];
@@ -256,6 +268,7 @@ namespace OhGeeCD.UI
             if (ImGui.Checkbox("OGCD Tracker in Edit Mode", ref editPosition))
             {
                 manager.OGCDTrackerInEditMode = editPosition;
+                drawHelper.InEditMode = editPosition;
             }
             DrawHelper.DrawHelpText("Enables you to edit the OGCD tracker size and position.");
 
@@ -585,6 +598,7 @@ namespace OhGeeCD.UI
                 {
                     otherBar.InEditMode = false;
                 }
+                drawHelper.InEditMode = editPosition;
             }
             ImGui.Unindent();
 

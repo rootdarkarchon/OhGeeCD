@@ -52,6 +52,8 @@ namespace OhGeeCD.UI
             }
         }
 
+        public bool InEditMode { get; set; } = false;
+
         public static void DrawOutlinedFont(ImDrawListPtr drawList, string text, Vector2 textPos, uint fontColor, uint outlineColor, int thickness)
         {
             drawList.AddText(new Vector2(textPos.X, textPos.Y - thickness),

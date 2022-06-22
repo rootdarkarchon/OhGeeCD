@@ -46,7 +46,7 @@ namespace OhGeeCD.UI
 
         public override void Draw()
         {
-            if (!playerConditionManager.ProcessingActive() || !playerManager.DrawOGCDTracker || ActiveJob == null) return;
+            if (!drawHelper.InEditMode && (!playerConditionManager.ProcessingActive() || !playerManager.DrawOGCDTracker || ActiveJob == null)) return;
 
             float size = ((ImGui.GetWindowContentRegionMax().Y - ImGui.GetWindowContentRegionMin().Y));
             float totalWidth = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X - size;
@@ -146,6 +146,11 @@ namespace OhGeeCD.UI
                         (short)size, 1.0f, DrawOGCDFlags.DrawTime);
                 }
             }
+        }
+
+        public override void OnClose()
+        {
+            playerManager.OGCDTrackerInEditMode = false;
         }
 
         public override void PreDraw()
