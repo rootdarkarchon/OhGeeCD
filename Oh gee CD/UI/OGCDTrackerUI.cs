@@ -5,6 +5,7 @@ using OhGeeCD.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 namespace OhGeeCD.UI
 {
@@ -77,9 +78,15 @@ namespace OhGeeCD.UI
 
                 int barId = 0;
                 allBars = allBars.Where(b => b.DrawOnTracker).ToList();
-                size /= allBars.Count;
-                var maxTextSize = allBars.Select(b => ImGui.CalcTextSize(b.Name)).OrderBy(v => v.X).Last();
-                totalWidth = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X - size - maxTextSize.X - 5;
+                size /= allBars.Count == 0 ? 1 : allBars.Count;
+                Vector2 maxTextSize = new Vector2(0f, 0f);
+                if (allBars.Any())
+                {
+                    maxTextSize = allBars.Select(b => ImGui.CalcTextSize(b.Name)).OrderBy(v => v.X).Last();
+                }
+
+                totalWidth = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X - size -
+                             maxTextSize.X - 5;
 
                 float xMinPos = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMin().X;
                 float xMaxPos = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X; // + totalWidth + size + maxTextSize.X;
