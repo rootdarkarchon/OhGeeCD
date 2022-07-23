@@ -219,6 +219,7 @@ namespace OhGeeCD.Model
             EarlyCallout = fittingActionFromConfig.EarlyCallout;
             SoundPath = fittingActionFromConfig.SoundPath;
             IconToDraw = fittingActionFromConfig.IconToDraw;
+            VisualizationStyle = fittingActionFromConfig.VisualizationStyle;
         }
 
         private unsafe void PlaySound()
