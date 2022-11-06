@@ -3,14 +3,14 @@
   <PropertyGroup>
     <Authors>darkarchon</Authors>
     <Company></Company>
-    <Version>0.0.21</Version>
+    <Version>0.0.22</Version>
     <Description>Oh gee CD</Description>
     <Copyright></Copyright>
     <PackageProjectUrl>https://github.com/rootdarkarchon/OhGeeCD</PackageProjectUrl>
   </PropertyGroup>
 
   <PropertyGroup>
-    <TargetFramework>net5.0-windows</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
     <Platforms>x64</Platforms>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -23,6 +23,7 @@
   <PropertyGroup>
     <DalamudLibPath>$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
     <RepositoryUrl>https://github.com/rootdarkarchon/OhGeeCD</RepositoryUrl>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>
